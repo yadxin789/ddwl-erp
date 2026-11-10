@@ -31,7 +31,7 @@
                         <td>{{ $supplier->supplier_name }}</td>
                         <td>{{ $supplier->supplier_type ?? '-' }}</td>
                         <td>{{ $supplier->contact_person ?? '-' }}</td>
-                        <td>{{ $supplier->contact_phone ?? '-' }}</td>
+                        <td>{{ \App\Support\MaskingService::phone($supplier->contact_phone) }}</td>
                         <td>{{ $supplier->lead_time_days ?? '-' }}</td>
                         <td>@if ($supplier->status === 1) <span class="badge bg-success">启用</span> @else <span class="badge bg-secondary">停用</span> @endif</td>
                         <td>

@@ -30,7 +30,7 @@
                         <td><span class="font-monospace">{{ $customer->customer_code }}</span></td>
                         <td>{{ $customer->customer_name }}</td>
                         <td>{{ $customer->contact_person ?? '-' }}</td>
-                        <td>{{ $customer->contact_phone ?? '-' }}</td>
+                        <td>{{ \App\Support\MaskingService::phone($customer->contact_phone) }}</td>
                         <td>{{ $customer->payment_terms ?? '-' }}</td>
                         <td>{{ $customer->credit_limit ? number_format($customer->credit_limit) : '-' }}</td>
                         <td>@if ($customer->status === 1) <span class="badge bg-success">启用</span> @else <span class="badge bg-secondary">停用</span> @endif</td>

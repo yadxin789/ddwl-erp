@@ -24,7 +24,7 @@
         <thead class="table-light"><tr><th>员工</th><th>期间</th><th>基本</th><th>奖金</th><th>扣款</th><th>实发</th></tr></thead>
         <tbody>
             @forelse ($rows as $r)
-            <tr><td>{{ $r->employee->name ?? '-' }}</td><td>{{ $r->period }}</td><td>¥{{ number_format($r->base,2) }}</td><td>¥{{ number_format($r->bonus,2) }}</td><td>¥{{ number_format($r->deduction,2) }}</td><td><strong>¥{{ number_format($r->net,2) }}</strong></td></tr>
+            <tr><td>{{ $r->employee->name ?? '-' }}</td><td>{{ $r->period }}</td><td>{{ \App\Support\MaskingService::salary($r->base) }}</td><td>{{ \App\Support\MaskingService::salary($r->bonus) }}</td><td>{{ \App\Support\MaskingService::salary($r->deduction) }}</td><td><strong>{{ \App\Support\MaskingService::salary($r->net) }}</strong></td></tr>
             @empty
             <tr><td colspan="6" class="text-center text-muted py-4">暂无工资记录</td></tr>
             @endforelse

@@ -6,7 +6,7 @@ use App\Models\Hr\HrRecruitment;
 use App\Models\Hr\HrSalary;
 use App\Models\Hr\HrPerformance;
 use App\Models\Hr\HrEmployee;
-use App\Services\NumberGenerator;
+use App\Support\NumberGenerator;
 use Illuminate\Http\Request;
 
 class HrAdvancedController extends Controller

@@ -20,7 +20,7 @@
         <thead class="table-light"><tr><th>编码</th><th>名称</th><th>联系人</th><th>电话</th><th>到期日</th><th>状态</th></tr></thead>
         <tbody>
             @forelse ($tenants as $t)
-            <tr><td class="font-monospace">{{ $t->code }}</td><td>{{ $t->name }}</td><td>{{ $t->contact_name ?? '-' }}</td><td>{{ $t->contact_phone ?? '-' }}</td><td>{{ $t->expired_at }}</td><td><span class="badge bg-secondary text-dark">{{ \App\Enums\TenantStatus::tryFrom($t->status)?->label() ?? $t->status }}</span></td></tr>
+            <tr><td class="font-monospace">{{ $t->code }}</td><td>{{ $t->name }}</td><td>{{ $t->contact_name ?? '-' }}</td><td>{{ \App\Support\MaskingService::phone($t->contact_phone) }}</td><td>{{ $t->expired_at }}</td><td><span class="badge bg-secondary text-dark">{{ \App\Enums\TenantStatus::tryFrom($t->status)?->label() ?? $t->status }}</span></td></tr>
             @empty
             <tr><td colspan="6" class="text-center text-muted py-4">暂无租户</td></tr>
             @endforelse

@@ -25,7 +25,7 @@
         <thead class="table-light"><tr><th>工号</th><th>姓名</th><th>部门</th><th>岗位</th><th>电话</th><th>状态</th></tr></thead>
         <tbody>
             @forelse ($emps as $e)
-            <tr><td class="font-monospace">{{ $e->emp_no }}</td><td>{{ $e->name }}</td><td>{{ $e->department->name ?? '-' }}</td><td>{{ $e->position ?? '-' }}</td><td>{{ $e->phone ?? '-' }}</td><td><span class="badge bg-secondary text-dark">{{ $e->status }}</span></td></tr>
+            <tr><td class="font-monospace">{{ $e->emp_no }}</td><td>{{ $e->name }}</td><td>{{ $e->department->name ?? '-' }}</td><td>{{ $e->position ?? '-' }}</td><td>{{ \App\Support\MaskingService::phone($e->phone) }}</td><td><span class="badge bg-secondary text-dark">{{ $e->status }}</span></td></tr>
             @empty
             <tr><td colspan="6" class="text-center text-muted py-4">暂无员工</td></tr>
             @endforelse

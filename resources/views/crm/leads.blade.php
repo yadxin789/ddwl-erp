@@ -25,7 +25,7 @@
                 <td class="font-monospace">{{ $l->lead_no }}</td>
                 <td>{{ $l->company_name }}</td>
                 <td>{{ $l->contact_name ?? '-' }}</td>
-                <td>{{ $l->phone ?? '-' }}</td>
+                <td>{{ \App\Support\MaskingService::phone($l->phone) }}</td>
                 <td>{{ $l->source ?? '-' }}</td>
                 <td><span class="badge bg-secondary text-dark">{{ \App\Enums\CrmLeadStatus::tryFrom($l->status)?->label() ?? $l->status }}</span></td>
                 <td>{{ $l->owner->name ?? '-' }}</td>
