@@ -57,10 +57,17 @@ if (-not $SkipLint) {
 }
 
 # 2. 路由注册
-& $php artisan route:list *> $null
+$routeJson = & $php artisan route:list --json
 if ($LASTEXITCODE -ne 0) { Fail 'route:list 失败（路由注册层面有错误）' }
-$routeCount = (& $php artisan route:list --json | ConvertFrom-Json).Count
-Pass "route:list（$routeCount 条路由）"
+$routes = $routeJson | ConvertFrom-Json
+$routeCount = $routes.Count
+$named = @($routes | Where-Object { $_.name } | ForEach-Object { $_.name })
+$duplicated = @($named | Group-Object | Where-Object { $_.Count -gt 1 })
+if ($duplicated.Count -gt 0) {
+    $duplicated | ForEach-Object { Write-Host ("  - {0} × {1}" -f $_.Name, $_.Count) }
+    Fail "路由名称重复：$($duplicated.Count) 个（route:list 本身不报错，CI 必须自己拦）"
+}
+Pass "route:list（$routeCount 条路由，$($named.Count) 个命名路由无重复）"
 
 # 3. 岗位/菜单/权限守卫
 $guardOutput = & $php artisan erp:guard:check 2>&1
@@ -70,6 +77,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 $guardSummary = ($guardOutput | Where-Object { $_ -match '权限库' } | Select-Object -Last 1)
 $guardPass = ($guardOutput | Where-Object { $_ -match 'M1~M7 全部通过' } | Select-Object -Last 1)
+$guardGap = ($guardOutput | Where-Object { $_ -match '尚未建成的页面' } | Select-Object -Last 1)
+if ($guardGap) {
+    $guardOutput | Select-Object -Last 12 | ForEach-Object { Write-Host $_ }
+    Fail '菜单指向了不存在的路由（缺口页）：CI 要求映射可解析，不接受"自动跳过"'
+}
 Pass "erp:guard:check：$guardSummary；$guardPass"
 
 # 4. 全量回归
