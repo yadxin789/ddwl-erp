@@ -65,8 +65,8 @@ class DataScopeTest extends TestCase
                 'salesperson_id' => 999999,
             ]);
 
-            // self：只看到自己的那一单
-            $this->assertSame(1, SalesOrder::count());
+            // self：看到既有演示单 + 自己新建的那一单（不假定演示库为空）
+            $this->assertSame($baseline + 1, SalesOrder::count());
 
             // all：仓库主管看到全部（含新建两单）
             $this->actingAsDemo('wh-supervisor');

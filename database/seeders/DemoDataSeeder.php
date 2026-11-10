@@ -205,10 +205,16 @@ class DemoDataSeeder extends Seeder
             ['customer_code' => 'C0003', 'customer_name' => '广州明远贸易有限公司', 'contact_person' => '王总', 'contact_phone' => '13800000003', 'payment_terms' => '现款现货', 'credit_limit' => 100000],
         ];
 
+        $sales = User::where('username', 'sales')->first();
+
         foreach ($customers as $customer) {
-            Customer::firstOrCreate(
+            Customer::updateOrCreate(
                 ['customer_code' => $customer['customer_code']],
-                $customer + ['status' => 1]
+                $customer + [
+                    'status' => 1,
+                    'owner_id' => $sales?->id,
+                    'department_id' => $sales?->department_id,
+                ]
             );
         }
     }
@@ -225,10 +231,16 @@ class DemoDataSeeder extends Seeder
             ['supplier_code' => 'S0004', 'supplier_name' => '深圳华强PCB板厂', 'contact_person' => '周工', 'contact_phone' => '13900000004', 'supplier_type' => '加工', 'lead_time_days' => 5],
         ];
 
+        $purchase = User::where('username', 'purchase')->first();
+
         foreach ($suppliers as $supplier) {
-            Supplier::firstOrCreate(
+            Supplier::updateOrCreate(
                 ['supplier_code' => $supplier['supplier_code']],
-                $supplier + ['status' => 1]
+                $supplier + [
+                    'status' => 1,
+                    'owner_id' => $purchase?->id,
+                    'department_id' => $purchase?->department_id,
+                ]
             );
         }
     }

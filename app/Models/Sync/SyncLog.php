@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SyncLog extends Model
 {
-    protected $fillable = ['sync_task_id', 'run_at', 'status', 'total_count', 'success_count', 'message'];
-    protected $casts = ['run_at' => 'datetime'];
+    protected $fillable = ['sync_task_id', 'run_at', 'status', 'total_count', 'success_count', 'message', 'replay_of', 'replayed_at'];
+    protected $casts = ['run_at' => 'datetime', 'replayed_at' => 'datetime'];
 
     public function task(): BelongsTo
     {

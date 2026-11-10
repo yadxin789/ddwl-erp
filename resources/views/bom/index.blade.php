@@ -42,7 +42,7 @@
                         </td>
                         <td>{{ $bom->version }}</td>
                         <td>
-                            @php $label = \App\Enums\BomStatus::label($bom->status); @endphp
+                            @php $label = \App\Enums\BomStatus::tryFrom((string) $bom->status)?->label() ?? $bom->status; @endphp
                             @if ($bom->status === 'approved') <span class="badge bg-success">{{ $label }}</span>
                             @elseif ($bom->status === 'draft') <span class="badge bg-secondary">{{ $label }}</span>
                             @elseif ($bom->status === 'pending') <span class="badge bg-warning text-dark">{{ $label }}</span>

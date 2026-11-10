@@ -13,6 +13,7 @@ use App\Http\Controllers\BomController;
 use App\Http\Controllers\BomImportController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CrmController;
+use App\Http\Controllers\ObservabilityController;
 use App\Http\Controllers\DevopsController;
 use App\Http\Controllers\EcomOnboardingController;
 use App\Http\Controllers\EcomController;
@@ -569,6 +570,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware(['permission:system.devops', 'sensitive:devops'])->group(function () {
         Route::get('/devops', [DevopsController::class, 'index'])->name('devops.index');
         Route::post('/devops/clear-cache', [DevopsController::class, 'clearCache'])->name('devops.clear-cache');
+        Route::get('/system/observability', [ObservabilityController::class, 'index'])->name('system.observability');
     });
 
     // 同步任务
@@ -576,6 +578,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/sync/tasks', [SyncController::class, 'index'])->name('sync.tasks');
         Route::post('/sync/tasks', [SyncController::class, 'store'])->name('sync.tasks.store');
         Route::post('/sync/tasks/{task}/toggle', [SyncController::class, 'toggle'])->whereNumber('task')->name('sync.tasks.toggle');
+        Route::post('/sync/logs/{log}/replay', [ObservabilityController::class, 'replay'])->whereNumber('log')->name('sync.logs.replay');
     });
 
     // 营销与售后
