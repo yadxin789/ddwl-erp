@@ -34,6 +34,7 @@ use App\Http\Controllers\OfficeController;
 use App\Http\Controllers\PlatformController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ProductionController;
+use App\Http\Controllers\ApsController;
 use App\Http\Controllers\ProductCenterController;
 use App\Http\Controllers\ProcurementController;
 use App\Http\Controllers\QualityController;
@@ -194,6 +195,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:production.view')->group(function () {
         Route::get('/production/work-centers', [ProductionController::class, 'workCenters'])->name('production.work-centers');
         Route::get('/production/routings', [ProductionController::class, 'routings'])->name('production.routings');
+        Route::get('/production/aps', [ApsController::class, 'index'])->name('production.aps');
     });
     // 生产工单列表：只有生产岗能看（production.order.view），工程师的 production.view 不含此页
     Route::middleware('permission:production.order.view')->group(function () {
@@ -212,6 +214,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:production.create')->group(function () {
         Route::post('/production/work-centers', [ProductionController::class, 'workCenterStore'])->name('production.work-centers.store');
         Route::post('/production/routings', [ProductionController::class, 'routingStore'])->name('production.routings.store');
+        Route::post('/production/aps', [ApsController::class, 'schedule'])->name('production.aps.schedule');
         Route::get('/production/orders/create', [ProductionController::class, 'orderCreate'])->name('production.orders.create');
         Route::post('/production/orders', [ProductionController::class, 'orderStore'])->name('production.orders.store');
     });

@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             DemoDataSeeder::class,
             // P1-04 端到端验收剧本（客户/供应商/物料/BOM/销售单/采购单/工单，测试与演示共用）
             AcceptanceSeeder::class,
+            ApsSeeder::class,
             // P1-02 A 类物料虚拟标准价（依赖 Acceptance/DemoData 的库存）
             DemoStandardCostSeeder::class,
             // P1-01 六条业务审批流（依赖演示账号 id）
