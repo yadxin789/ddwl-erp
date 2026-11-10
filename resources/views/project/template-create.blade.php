@@ -73,7 +73,10 @@
     </div>
 
     <div class="card mb-3">
-        <div class="card-header fw-semibold">任务配置</div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">任务配置</span>
+            <small class="text-muted">同一任务类型有多张图纸时，点该行“+”新增任务</small>
+        </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-sm table-bordered align-middle mb-0">
@@ -85,11 +88,12 @@
                         <th style="min-width:180px;">任务名称</th>
                         <th style="min-width:130px;">执行人</th>
                         <th style="min-width:130px;">审核人</th>
+                        <th style="width:96px;">操作</th>
                     </tr>
                     </thead>
                     <tbody id="taskBody">
                     @foreach($taskTypes as $index => $type)
-                        <tr class="task-row" data-dept-id="{{ $type->department_id }}" data-task-type-id="{{ $type->id }}">
+                        <tr class="task-row task-row-base" data-dept-id="{{ $type->department_id }}" data-task-type-id="{{ $type->id }}" data-task-type-name="{{ $type->name }}">
                             <td>
                                 {{ $type->name }}
                                 <input type="hidden" name="tasks[{{ $index }}][task_type_id]" value="{{ $type->id }}">
@@ -112,6 +116,16 @@
                             </td>
                             <td>
                                 <select class="form-select form-select-sm task-auditor" name="tasks[{{ $index }}][auditor_id]"></select>
+                            </td>
+                            <td class="text-nowrap">
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-add-task"
+                                        onclick="addSameTypeTask(this)" title="新增同类型任务">
+                                    <i class="fa fa-plus"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-task d-none"
+                                        onclick="removeTaskRow(this)" title="删除该任务">
+                                    <i class="fa fa-trash"></i>
+                                </button>
                             </td>
                         </tr>
                     @endforeach
@@ -162,9 +176,72 @@
     const defaultExecutors = @json($defaultExecutors);
     const defaultAuditors = @json($defaultAuditors);
     const deptOrder = @json($deptOrder);
+    let taskIndexSeed = {{ $taskTypes->count() }};
 
     function taskRows() {
         return Array.prototype.slice.call(document.querySelectorAll('.task-row'));
+    }
+
+    /** 克隆一行任务，按 taskIndexSeed 重排 tasks[..] 名称，返回新行 */
+    function cloneTaskRow(baseRow, clearName) {
+        const clone = baseRow.cloneNode(true);
+        clone.classList.add('task-row-extra');
+        clone.classList.remove('task-row-base');
+
+        const index = taskIndexSeed++;
+        clone.querySelectorAll('[name]').forEach(function (element) {
+            element.name = element.name.replace(/tasks\[\d+\]/g, 'tasks[' + index + ']');
+        });
+
+        const checked = clone.querySelector('.task-enabled');
+        if (checked) checked.checked = true;
+        clone.classList.remove('table-secondary');
+
+        const name = clone.querySelector('.task-name');
+        if (name) {
+            if (clearName) {
+                name.value = '';
+                name.placeholder = (clone.dataset.taskTypeName || '') + '（请输入具体任务名称）';
+            }
+            name.maxLength = 128;
+        }
+
+        const removeButton = clone.querySelector('.btn-remove-task');
+        if (removeButton) removeButton.classList.remove('d-none');
+
+        // 同类型任务排在一起：插到该类型最后一行之后
+        let anchor = baseRow;
+        while (anchor.nextElementSibling && anchor.nextElementSibling.classList.contains('task-row')
+            && anchor.nextElementSibling.dataset.taskTypeId === baseRow.dataset.taskTypeId) {
+            anchor = anchor.nextElementSibling;
+        }
+        anchor.insertAdjacentElement('afterend', clone);
+
+        const deptId = parseInt(clone.dataset.deptId || '0', 10);
+        const executor = baseRow.querySelector('.task-executor');
+        const auditor = baseRow.querySelector('.task-auditor');
+        fillUserSelect(clone.querySelector('.task-executor'), deptId, executor ? executor.value : null, 'executor');
+        fillUserSelect(clone.querySelector('.task-auditor'), deptId, auditor ? auditor.value : null, 'auditor');
+
+        return clone;
+    }
+
+    function addSameTypeTask(button) {
+        const row = button.closest('.task-row');
+        const clone = cloneTaskRow(row, true);
+        calculateStats();
+        const name = clone.querySelector('.task-name');
+        if (name) {
+            name.focus();
+            name.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+    }
+
+    function removeTaskRow(button) {
+        const row = button.closest('.task-row');
+        if (!row || row.classList.contains('task-row-base')) return;
+        row.remove();
+        calculateStats();
     }
 
     function getSelectedDepts() {
@@ -271,7 +348,10 @@
             const taskName = row.querySelector('.task-name');
             const executor = row.querySelector('.task-executor');
             const auditor = row.querySelector('.task-auditor');
-            const label = (taskName && taskName.value.trim()) || '未命名任务';
+            if (!taskName || !taskName.value.trim()) {
+                errors.push('任务「' + (row.dataset.taskTypeName || '未命名') + '」需要填写具体任务名称');
+            }
+            const label = (taskName && taskName.value.trim()) || row.dataset.taskTypeName || '未命名任务';
             if (!executor || !executor.value) errors.push('任务「' + label + '」需要选择执行人');
             if (!auditor || !auditor.value) errors.push('任务「' + label + '」需要选择审核人');
         });

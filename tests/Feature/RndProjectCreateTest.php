@@ -100,6 +100,38 @@ class RndProjectCreateTest extends TestCase
         $this->assertSame(now()->addDays(4)->toDateString(), $task->end_date->toDateString());
     }
 
+    public function test_project_store_accepts_multiple_tasks_of_same_type(): void
+    {
+        $this->actingAs($this->manager);
+
+        $type = RndTaskType::whereNotNull('department_id')->orderBy('sort_order')->firstOrFail();
+        $deptId = (int) $type->department_id;
+        $task = [
+            'task_type_id' => $type->id,
+            'department_id' => $deptId,
+            'enabled' => '1',
+            'executor_id' => $this->manager->id,
+            'auditor_id' => $this->auditor->id,
+        ];
+
+        $this->post(route('rnd.projects.store'), [
+            'project_name' => '同类型多任务回归项目',
+            'start_date' => now()->toDateString(),
+            'selected_depts' => [$deptId],
+            'dept_days' => [$deptId => 5],
+            'tasks' => [
+                $task + ['name' => '电源原理图'],
+                $task + ['name' => '主控原理图'],
+                $task + ['name' => '驱动原理图'],
+            ],
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $project = RndProject::where('project_name', '同类型多任务回归项目')->firstOrFail();
+        $names = RndProjectTask::where('project_id', $project->id)->orderBy('id')->pluck('name')->all();
+
+        $this->assertSame(['电源原理图', '主控原理图', '驱动原理图'], $names);
+    }
+
     public function test_template_store_saves_full_task_config(): void
     {
         $this->actingAs($this->manager);
@@ -138,5 +170,50 @@ class RndProjectCreateTest extends TestCase
             ->assertOk()
             ->assertJsonPath('tasks.0.name', '模板任务名称')
             ->assertJsonPath('tasks.0.task_type_id', $type->id);
+    }
+
+    public function test_template_store_accepts_multiple_tasks_of_same_type(): void
+    {
+        $this->actingAs($this->manager);
+
+        $type = RndTaskType::whereNotNull('department_id')->orderBy('sort_order')->firstOrFail();
+        $deptId = (int) $type->department_id;
+        $task = [
+            'task_type_id' => $type->id,
+            'department_id' => $deptId,
+            'enabled' => '1',
+            'executor_id' => $this->manager->id,
+            'auditor_id' => $this->auditor->id,
+        ];
+
+        $this->post(route('project.templates.store'), [
+            'name' => '同类型多任务模板',
+            'description' => '一个类型下多张图纸',
+            'selected_depts' => [$deptId],
+            'dept_days' => [$deptId => 5],
+            'tasks' => [
+                $task + ['name' => '电源原理图'],
+                $task + ['name' => '主控原理图'],
+            ],
+        ])->assertRedirect(route('project.templates'));
+
+        $template = ProjectTemplate::where('name', '同类型多任务模板')->firstOrFail();
+        $this->assertCount(2, $template->taskConfigs());
+        $this->assertSame(['电源原理图', '主控原理图'], array_column($template->taskConfigs(), 'name'));
+
+        $this->get(route('project.templates.config', $template))
+            ->assertOk()
+            ->assertJsonCount(2, 'tasks')
+            ->assertJsonPath('tasks.0.name', '电源原理图')
+            ->assertJsonPath('tasks.1.name', '主控原理图');
+
+        $this->post(route('project.templates.apply', $template), [
+            'project_name' => '按多任务模板创建的项目',
+            'start_date' => now()->toDateString(),
+        ])->assertRedirect();
+
+        $project = RndProject::where('project_name', '按多任务模板创建的项目')->firstOrFail();
+        $names = RndProjectTask::where('project_id', $project->id)->orderBy('id')->pluck('name')->all();
+        $this->assertSame(['电源原理图', '主控原理图'], $names);
     }
 }
