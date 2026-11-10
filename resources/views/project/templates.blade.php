@@ -1,48 +1,55 @@
 @extends('layouts.admin')
 
-@section('title', '项目模板')
+@section('title', '项目模板管理')
 
 @section('content')
-<div class="card mb-3"><div class="card-header">新建模板</div>
-    <form method="POST" action="{{ route('project.templates.store') }}" class="card-body row g-2">
-        @csrf
-        <div class="col-md-4"><input type="text" name="name" class="form-control form-control-sm" required maxlength="128" placeholder="模板名称（如 消费电子新品）"></div>
-        <div class="col-md-3">
-            <select name="task_type_ids[]" class="form-select form-select-sm" multiple size="3" required>
-                @foreach ($taskTypes as $type)
-                    <option value="{{ $type->id }}">{{ $type->name }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col-md-2"><button class="btn btn-sm btn-primary w-100">创建模板</button></div>
-    </form>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">项目模板管理</h1>
+    <a href="{{ route('project.templates.create') }}" class="btn btn-primary btn-sm">
+        <i class="fa fa-plus me-1"></i>创建项目模板
+    </a>
 </div>
 
-<div class="card"><div class="card-header">模板列表（{{ $templates->count() }}）</div>
-    <table class="table table-sm align-middle mb-0">
-        <thead class="table-light"><tr><th>模板</th><th>任务类型</th><th style="width:340px;">按模板建项目</th></tr></thead>
-        <tbody>
-        @forelse ($templates as $template)
-            <tr>
-                <td class="fw-bold small">{{ $template->name }}<div class="text-muted font-monospace">{{ $template->code }}</div></td>
-                <td class="small">
-                    @foreach ($template->taskTypes() as $type)
-                        <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ $type->name }}</span>
+<div class="card">
+    <div class="card-body p-0">
+        @if($templates->isEmpty())
+            <p class="text-center text-muted py-4 mb-0">暂无项目模板</p>
+        @else
+            <div class="table-responsive">
+                <table class="table table-striped align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>项目模板名称</th>
+                        <th>描述</th>
+                        <th>任务配置</th>
+                        <th>创建人</th>
+                        <th>创建时间</th>
+                        <th style="width:170px;">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($templates as $template)
+                        <tr>
+                            <td>{{ $template->name }}</td>
+                            <td>{{ $template->description ?: '-' }}</td>
+                            <td>
+                                @foreach($template->taskTypes() as $type)
+                                    <span class="badge bg-secondary me-1 mb-1">{{ $type->name }}</span>
+                                @endforeach
+                            </td>
+                            <td>{{ $template->user->name ?? '-' }}</td>
+                            <td>{{ $template->created_at?->format('Y-m-d H:i') ?? '-' }}</td>
+                            <td>
+                                <a href="{{ route('rnd.projects.create', ['template' => $template->id]) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fa fa-plus me-1"></i>用此模板建项目
+                                </a>
+                            </td>
+                        </tr>
                     @endforeach
-                </td>
-                <td>
-                    <form method="POST" action="{{ route('project.templates.apply', $template) }}" class="d-flex gap-1">
-                        @csrf
-                        <input type="text" name="project_name" class="form-control form-control-sm" required placeholder="项目名称">
-                        <input type="date" name="start_date" value="{{ now()->toDateString() }}" class="form-control form-control-sm" required style="width:150px;">
-                        <button class="btn btn-sm btn-outline-primary">建项目</button>
-                    </form>
-                </td>
-            </tr>
-        @empty
-            <tr><td colspan="3" class="text-center text-muted py-4">暂无模板</td></tr>
-        @endforelse
-        </tbody>
-    </table>
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
 </div>
 @endsection

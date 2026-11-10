@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Organization\Department;
 use App\Models\Organization\User;
+use App\Models\Rnd\ProjectTemplate;
 use App\Models\Rnd\RndExtensionApplication;
 use App\Models\Rnd\RndProject;
 use App\Models\Rnd\RndProjectDocument;
@@ -26,22 +28,123 @@ class RndController extends Controller
         return view('rnd.projects', compact('projects'));
     }
 
+    /**
+     * 创建研发项目页：与参考项目 project/create 对齐，加载任务类型、模板、参与部门与部门人员。
+     */
     public function projectCreate()
     {
-        return view('rnd.project-create');
+        $taskTypes = RndTaskType::with('department')
+            ->where('is_required', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        $departments = $taskTypes->pluck('department')
+            ->filter()
+            ->unique('id')
+            ->sortBy('sort_order')
+            ->values();
+
+        // 任务类型尚未维护部门时，至少让页面可操作：默认归到第一个启用部门
+        if ($departments->isEmpty()) {
+            $departments = Department::where('status', 1)->orderBy('sort_order')->get();
+        }
+        $fallbackDeptId = optional($departments->first())->id;
+        $taskTypes->each(function ($type) use ($fallbackDeptId) {
+            if (! $type->department_id) {
+                $type->department_id = $fallbackDeptId;
+            }
+        });
+
+        $users = User::where('status', 1)->orderBy('name')->get(['id', 'name', 'department_id']);
+        $usersByDept = $users->groupBy('department_id')
+            ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'name' => $u->name])->values()->all())
+            ->all();
+
+        $defaultExecutors = [];
+        $defaultAuditors = [];
+        foreach ($departments as $dept) {
+            $first = $users->firstWhere('department_id', $dept->id);
+            if ($first) {
+                $defaultExecutors[$dept->id] = (int) $first->id;
+                $defaultAuditors[$dept->id] = (int) $first->id;
+            }
+        }
+
+        $templates = ProjectTemplate::orderBy('name')->get();
+
+        return view('rnd.project-create', compact(
+            'taskTypes', 'templates', 'departments', 'usersByDept', 'defaultExecutors', 'defaultAuditors'
+        ));
     }
 
+    /**
+     * 创建研发项目：按参考项目口径按部门串行排期，并一次性生成任务。
+     * 只有“选中部门 + 启用”的任务才会落库，且必须指定执行人与审核人。
+     */
     public function projectStore(Request $request)
     {
         $data = $request->validate([
             'project_name' => ['required', 'string', 'max:128'],
+            'code' => ['nullable', 'string', 'max:64', 'unique:rnd_projects,project_code'],
+            'version' => ['nullable', 'string', 'max:20'],
+            'product_name' => ['nullable', 'string', 'max:128'],
             'product_model' => ['nullable', 'string', 'max:64'],
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date'],
+            'start_date' => ['required', 'date', 'after_or_equal:today'],
+            'selected_depts' => ['required', 'array', 'min:1'],
+            'selected_depts.*' => ['integer', 'exists:departments,id'],
+            'dept_days' => ['required', 'array'],
+            'dept_days.*' => ['integer', 'min:1', 'max:365'],
+            'tasks' => ['required', 'array', 'min:1'],
+            'tasks.*.task_type_id' => ['required', 'integer', 'exists:rnd_task_types,id'],
+            'tasks.*.name' => ['nullable', 'string', 'max:128'],
+            'tasks.*.department_id' => ['required', 'integer', 'exists:departments,id'],
+            'tasks.*.enabled' => ['nullable'],
+            'tasks.*.executor_id' => ['nullable', 'integer', 'exists:users,id'],
+            'tasks.*.auditor_id' => ['nullable', 'integer', 'exists:users,id'],
+            'tasks.*.start_date' => ['nullable', 'date'],
+            'tasks.*.end_date' => ['nullable', 'date'],
+        ], [
+            'project_name.required' => '请输入项目名称',
+            'start_date.required' => '请选择开始日期',
+            'start_date.after_or_equal' => '开始日期不能早于今天',
+            'selected_depts.required' => '请至少选择一个部门',
+            'dept_days.*.min' => '部门天数不能少于 1 天',
+            'dept_days.*.max' => '部门天数不能超过 365 天',
+            'tasks.required' => '请至少配置一个任务',
         ]);
-        $p = $this->service->createProject($data);
 
-        return redirect()->route('rnd.projects.show', $p)->with('success', "项目 {$p->project_code} 已创建。");
+        $selectedDepts = array_map('intval', $data['selected_depts']);
+        $tasksByDept = [];
+        $errors = [];
+
+        foreach ($data['tasks'] as $index => $task) {
+            $deptId = (int) $task['department_id'];
+            $enabled = ! empty($task['enabled']) && $task['enabled'] !== '0';
+
+            // 未选中部门 / 未启用的任务不参与建项目
+            if (! in_array($deptId, $selectedDepts, true) || ! $enabled) {
+                continue;
+            }
+            if (empty($task['executor_id'])) {
+                $errors["tasks.{$index}.executor_id"] = '任务「' . (($task['name'] ?? '') ?: '未命名') . '」需要选择执行人';
+            }
+            if (empty($task['auditor_id'])) {
+                $errors["tasks.{$index}.auditor_id"] = '任务「' . (($task['name'] ?? '') ?: '未命名') . '」需要选择审核人';
+            }
+
+            $tasksByDept[$deptId][] = $task;
+        }
+
+        if ($errors) {
+            return back()->withErrors($errors)->withInput();
+        }
+        if (empty($tasksByDept)) {
+            return back()->withErrors(['tasks' => '请至少启用一个属于已选部门的任务'])->withInput();
+        }
+
+        $project = $this->service->createProject($data, $tasksByDept, $selectedDepts, $data['dept_days']);
+
+        return redirect()->route('rnd.projects.show', $project)->with('success', "项目 {$project->project_code} 已创建。");
     }
 
     public function projectShow(RndProject $project)
@@ -189,6 +292,8 @@ class RndController extends Controller
 
         $data = $request->validate([
             'task_type_id' => ['required', 'exists:rnd_task_types,id'],
+            'name' => ['nullable', 'string', 'max:128'],
+            'department_id' => ['nullable', 'exists:departments,id'],
             'executor_id' => ['required', 'exists:users,id'],
             'auditor_id' => ['nullable', 'exists:users,id'],
             'start_date' => ['nullable', 'date'],

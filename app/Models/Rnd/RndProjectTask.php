@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RndProjectTask extends Model
 {
-    protected $fillable = ['project_id', 'task_type_id', 'department_id', 'executor_id', 'auditor_id', 'start_date', 'end_date', 'status', 'is_overdue', 'extension_days'];
+    protected $fillable = ['project_id', 'task_type_id', 'name', 'department_id', 'executor_id', 'auditor_id', 'start_date', 'end_date', 'status', 'is_overdue', 'extension_days'];
     protected $casts = ['end_date' => 'date', 'start_date' => 'date', 'is_overdue' => 'boolean'];
 
     public function project(): BelongsTo

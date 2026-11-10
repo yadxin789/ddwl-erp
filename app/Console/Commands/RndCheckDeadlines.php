@@ -23,7 +23,7 @@ class RndCheckDeadlines extends Command
             ->whereNotIn('status', ['approved', 'completed', 'cancelled'])
             ->with(['project', 'taskType', 'executor'])
             ->each(function (RndProjectTask $task) use ($notifier) {
-                $taskName = $task->taskType->name ?? '交付物';
+                $taskName = $task->name ?: ($task->taskType->name ?? '交付物');
                 $notifier->send(
                     (int) $task->executor_id,
                     'rnd_overdue',
@@ -40,7 +40,7 @@ class RndCheckDeadlines extends Command
             ->with(['project', 'taskType', 'executor'])
             ->get();
         foreach ($dueToday as $task) {
-            $taskName = $task->taskType->name ?? '交付物';
+            $taskName = $task->name ?: ($task->taskType->name ?? '交付物');
             $notifier->send(
                 (int) $task->executor_id,
                 'rnd_due_today',

@@ -42,15 +42,30 @@ class ProjectTemplateSeeder extends Seeder
             ],
         ];
 
+        $typeIds = DB::table('rnd_task_types')->pluck('id', 'name');
+
         foreach ($templates as $template) {
+            $steps = [];
+            foreach ($template['tasks'] as $task) {
+                if (isset($typeIds[$task['name']])) {
+                    $steps[] = (int) $typeIds[$task['name']];
+                }
+            }
+
             $templateId = DB::table('project_templates')->where('code', $template['code'])->value('id');
 
             if (! $templateId) {
                 $templateId = DB::table('project_templates')->insertGetId([
                     'code' => $template['code'],
                     'name' => $template['name'],
-                    'steps' => json_encode(array_column($template['tasks'], 'type')),
+                    'description' => '系统预置样例模板',
+                    'steps' => json_encode($steps),
                     'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } else {
+                DB::table('project_templates')->where('id', $templateId)->update([
+                    'steps' => json_encode($steps),
                     'updated_at' => now(),
                 ]);
             }

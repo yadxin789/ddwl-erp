@@ -44,13 +44,18 @@
         <h6 class="fw-semibold">任务分配（文档交付 + 期限）</h6>
         <form method="POST" action="{{ route('rnd.tasks.store', $project) }}" class="row g-2 mb-3 align-items-end">
             @csrf
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <label class="form-label small">任务名称</label>
+                <input type="text" name="name" class="form-control form-control-sm" maxlength="128"
+                       placeholder="默认取交付物类型">
+            </div>
+            <div class="col-md-2">
                 <label class="form-label small">交付物类型</label>
                 <select name="task_type_id" class="form-select form-select-sm" required>
                     @foreach ($taskTypes as $t) <option value="{{ $t->id }}">{{ $t->name }}</option> @endforeach
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label small">执行人</label>
                 <select name="executor_id" class="form-select form-select-sm" required>
                     @foreach ($users as $u) <option value="{{ $u->id }}">{{ $u->name }}</option> @endforeach
@@ -74,11 +79,16 @@
         @endcan
 
         <table class="table table-sm table-bordered align-middle">
-            <thead class="table-light"><tr><th>交付物</th><th>执行人</th><th>审核人</th><th>截止</th><th>状态</th><th>文档</th></tr></thead>
+            <thead class="table-light"><tr><th>任务</th><th>执行人</th><th>审核人</th><th>截止</th><th>状态</th><th>文档</th></tr></thead>
             <tbody>
                 @forelse ($project->tasks as $t)
                 <tr class="{{ $t->is_overdue ? 'table-danger' : '' }}">
-                    <td>{{ $t->taskType->name ?? '#' . $t->task_type_id }}</td>
+                    <td>
+                        {{ $t->name ?: ($t->taskType->name ?? '#' . $t->task_type_id) }}
+                        @if($t->name && $t->taskType)
+                            <div class="small text-muted">{{ $t->taskType->name }}</div>
+                        @endif
+                    </td>
                     <td>{{ $t->executor->name ?? '-' }}</td>
                     <td>{{ $t->auditor->name ?? '-' }}</td>
                     <td>{{ $t->end_date }}@if($t->is_overdue) <span class="badge bg-danger">逾期</span> @endif</td>
@@ -98,7 +108,7 @@
                                 <form method="POST" action="{{ route('rnd.extensions.store', $t) }}">
                                     @csrf
                                     <div class="modal-content">
-                                        <div class="modal-header"><h6 class="modal-title">申请延期 - {{ $t->taskType->name ?? '#'.$t->id }}</h6></div>
+                                        <div class="modal-header"><h6 class="modal-title">申请延期 - {{ $t->name ?: ($t->taskType->name ?? '#'.$t->id) }}</h6></div>
                                         <div class="modal-body">
                                             <div class="mb-2"><label class="form-label small">延期天数</label><input type="number" name="apply_days" class="form-control" min="1" max="90" value="7" required></div>
                                             <div class="mb-2"><label class="form-label small">延期原因</label><textarea name="reason" class="form-control" rows="2" required></textarea></div>
@@ -112,6 +122,9 @@
                             <div class="small">v{{ $doc->version_no }}:
                                 @if ($doc->file)
                                     <a href="{{ route('files.download', $doc->file) }}">{{ $doc->file->file_name }}</a>
+                                    @if ($doc->file->canPreview())
+                                        <a href="{{ route('files.preview', $doc->file) }}" target="_blank" class="ms-1">预览</a>
+                                    @endif
                                 @else
                                     -
                                 @endif

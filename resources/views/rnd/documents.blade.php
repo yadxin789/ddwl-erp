@@ -29,7 +29,12 @@
                         <a href="{{ route('rnd.projects.show', $task->project_id) }}">{{ $task->project->project_name ?? '-' }}</a>
                         <div class="small text-muted font-monospace">{{ $task->project->project_code ?? '' }}</div>
                     </td>
-                    <td>{{ $task->taskType->name ?? '-' }}</td>
+                    <td>
+                        {{ $task->name ?: ($task->taskType->name ?? '-') }}
+                        @if($task->name && $task->taskType)
+                            <div class="small text-muted">{{ $task->taskType->name }}</div>
+                        @endif
+                    </td>
                     <td>{{ optional($task->end_date)->format('Y-m-d') }}</td>
                     <td><span class="badge bg-{{ $bmap[$task->status] ?? 'secondary' }}">{{ $smap[$task->status] ?? $task->status }}</span></td>
                     <td>
@@ -38,6 +43,9 @@
                                 v{{ $doc->version_no }} ·
                                 @if ($doc->file)
                                     <a href="{{ route('files.download', $doc->file) }}">{{ $doc->file->file_name }}</a>
+                                    @if ($doc->file->canPreview())
+                                        <a href="{{ route('files.preview', $doc->file) }}" target="_blank" class="ms-1">预览</a>
+                                    @endif
                                 @else
                                     -
                                 @endif

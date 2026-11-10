@@ -20,13 +20,21 @@
                         <a href="{{ route('rnd.projects.show', $doc->project_id) }}">{{ $doc->project->project_name ?? '-' }}</a>
                         <div class="small text-muted font-monospace">{{ $doc->project->project_code ?? '' }}</div>
                     </td>
-                    <td>{{ $doc->task->taskType->name ?? '-' }}</td>
+                    <td>
+                        {{ $doc->task->name ?: ($doc->task->taskType->name ?? '-') }}
+                        @if($doc->task->name && $doc->task->taskType)
+                            <div class="small text-muted">{{ $doc->task->taskType->name }}</div>
+                        @endif
+                    </td>
                     <td>{{ $doc->task->executor->name ?? '-' }}</td>
                     <td>{{ $doc->uploader->name ?? '-' }}</td>
                     <td class="small">
                         v{{ $doc->version_no }} ·
                         @if ($doc->file)
                             <a href="{{ route('files.download', $doc->file) }}">{{ $doc->file->file_name }}</a>
+                            @if ($doc->file->canPreview())
+                                <a href="{{ route('files.preview', $doc->file) }}" target="_blank" class="ms-1">预览</a>
+                            @endif
                         @else
                             -
                         @endif

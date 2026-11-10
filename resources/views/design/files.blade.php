@@ -23,10 +23,13 @@
         @forelse ($documents as $doc)
             <tr>
                 <td class="small">{{ $doc->project->project_name ?? '-' }}</td>
-                <td class="small">{{ $doc->task->taskType->name ?? '-' }}</td>
+                <td class="small">{{ $doc->task->name ?: ($doc->task->taskType->name ?? '-') }}</td>
                 <td class="small">
                     @if ($doc->file)
                         <a href="{{ route('files.download', $doc->file) }}">{{ $doc->file->file_name }}</a>
+                        @if ($doc->file->canPreview())
+                            <a href="{{ route('files.preview', $doc->file) }}" target="_blank" class="ms-1">预览</a>
+                        @endif
                     @else
                         -
                     @endif

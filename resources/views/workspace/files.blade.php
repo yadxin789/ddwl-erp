@@ -20,6 +20,9 @@
                         <tr>
                             <td>
                                 <a href="{{ route('files.download', $file) }}">{{ $file->file_name }}</a>
+                                @if ($file->canPreview())
+                                    <a href="{{ route('files.preview', $file) }}" target="_blank" class="ms-1">预览</a>
+                                @endif
                             </td>
                             <td class="text-end small text-muted">{{ number_format($file->file_size / 1024, 1) }} KB</td>
                             <td class="small">{{ $file->uploader->name ?? '-' }}</td>
@@ -42,6 +45,7 @@
                 <form method="POST" action="{{ route('file.resources.store') }}" enctype="multipart/form-data">
                     @csrf
                     <input type="file" name="file" class="form-control mb-2" required>
+                    <div class="form-text mb-2">可上传任意格式（最大 20MB）；图片、Excel、PDF、Office 可直接在线预览。</div>
                     <button class="btn btn-primary w-100">上传</button>
                 </form>
                 @else

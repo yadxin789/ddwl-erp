@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\Organization\Department;
 use App\Models\Rnd\EcrChangeOrder;
 use App\Models\Rnd\RndProject;
 use App\Models\Rnd\RndProjectDocument;
 use App\Models\Rnd\RndProjectTask;
+use App\Models\Rnd\RndTaskType;
 use App\Support\NumberGenerator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,28 +19,101 @@ class RndProjectService
     {
     }
 
-    public function createProject(array $data): RndProject
+    /**
+     * 创建研发项目。
+     *
+     * 传入选中的部门、部门天数与按部门分组的任务时，会按参考项目口径一次性生成任务：
+     * 部门间串行、部门内并联（同部门任务共用起止日期）。
+     */
+    public function createProject(array $data, array $tasksByDept = [], array $selectedDeptIds = [], array $deptDays = []): RndProject
     {
-        Log::info('创建研发项目', ['user_id' => Auth::id(), 'project_name' => $data['project_name']]);
-        return RndProject::create([
-            'project_code' => NumberGenerator::generate('rnd_project'),
-            'project_name' => $data['project_name'],
-            'product_model' => $data['product_model'] ?? null,
-            'creator_id' => Auth::id() ?? 0,
-            'start_date' => $data['start_date'] ?? null,
-            'end_date' => $data['end_date'] ?? null,
-            'status' => 'in_progress',
-            'progress' => 0,
-        ]);
+        Log::info('创建研发项目', ['user_id' => Auth::id(), 'project_name' => $data['project_name'] ?? null]);
+
+        return DB::transaction(function () use ($data, $tasksByDept, $selectedDeptIds, $deptDays) {
+            $deptIds = Department::query()
+                ->whereIn('id', array_map('intval', $selectedDeptIds))
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->pluck('id')
+                ->all();
+
+            $start = \Carbon\Carbon::parse($data['start_date'] ?? now()->toDateString());
+            $deptStart = $start->copy();
+            $projectEnd = $start->copy();
+
+            foreach ($deptIds as $deptId) {
+                $days = max(1, (int) ($deptDays[$deptId] ?? 1));
+                $deptEnd = $deptStart->copy()->addDays($days - 1);
+                $projectEnd = $deptEnd->copy();
+                $deptStart = $deptEnd->copy()->addDay();
+            }
+
+            $project = RndProject::create([
+                'project_code' => ! empty($data['code']) ? $data['code'] : NumberGenerator::generate('rnd_project'),
+                'project_name' => $data['project_name'],
+                'product_name' => $data['product_name'] ?? null,
+                'product_model' => $data['product_model'] ?? null,
+                'version' => ! empty($data['version']) ? $data['version'] : 'V1.0',
+                'creator_id' => Auth::id() ?? 0,
+                'start_date' => $start->toDateString(),
+                'end_date' => $projectEnd->toDateString(),
+                'status' => 'in_progress',
+                'stage' => 'initiation',
+                'progress' => 0,
+            ]);
+
+            $deptStart = $start->copy();
+            foreach ($deptIds as $deptId) {
+                $days = max(1, (int) ($deptDays[$deptId] ?? 1));
+                $deptEnd = $deptStart->copy()->addDays($days - 1);
+
+                foreach (($tasksByDept[$deptId] ?? []) as $taskData) {
+                    $taskType = RndTaskType::find($taskData['task_type_id'] ?? null);
+                    $taskName = trim((string) ($taskData['name'] ?? '')) ?: ($taskType->name ?? '未命名任务');
+
+                    $task = RndProjectTask::create([
+                        'project_id' => $project->id,
+                        'task_type_id' => $taskData['task_type_id'],
+                        'name' => $taskName,
+                        'department_id' => $deptId,
+                        'executor_id' => $taskData['executor_id'] ?? null,
+                        'auditor_id' => $taskData['auditor_id'] ?? null,
+                        'start_date' => $deptStart->toDateString(),
+                        'end_date' => $deptEnd->toDateString(),
+                        'status' => 'pending',
+                    ]);
+
+                    if (! empty($taskData['executor_id'])) {
+                        $this->notifier->addTodo(
+                            (int) $taskData['executor_id'],
+                            'rnd_task',
+                            "研发任务：{$taskName}（项目 {$project->project_code}）",
+                            $deptEnd->toDateString(),
+                            'rnd_task',
+                            $task->id
+                        );
+                    }
+                }
+
+                $deptStart = $deptEnd->copy()->addDay();
+            }
+
+            return $project;
+        });
     }
 
     public function addTask(int $projectId, array $data): RndProjectTask
     {
         Log::info('创建研发任务', ['user_id' => Auth::id(), 'project_id' => $projectId, 'executor_id' => $data['executor_id']]);
+
+        $taskType = RndTaskType::find($data['task_type_id'] ?? null);
+        $taskName = trim((string) ($data['name'] ?? '')) ?: ($taskType->name ?? '交付物');
+
         $task = RndProjectTask::create([
             'project_id' => $projectId,
             'task_type_id' => $data['task_type_id'],
-            'department_id' => $data['department_id'] ?? null,
+            'name' => $taskName,
+            'department_id' => $data['department_id'] ?? $taskType?->department_id,
             'executor_id' => $data['executor_id'],
             'auditor_id' => $data['auditor_id'] ?? null,
             'start_date' => $data['start_date'] ?? null,
@@ -47,7 +122,6 @@ class RndProjectService
         ]);
 
         // 给执行人发待办
-        $taskName = $task->taskType->name ?? '交付物';
         $this->notifier->addTodo(
             (int) $data['executor_id'],
             'rnd_task',

@@ -50,7 +50,7 @@ class WorkspaceController extends Controller
             'file' => ['required', 'file', 'max:20480'],
         ], [], ['file' => '文件']);
 
-        // P0-07 / B-03：统一走 FileService（local 盘 uploads/，白名单校验），不再 store 到 public 盘
+        // P0-07 / B-03：统一走 FileService（local 盘 uploads/，任意格式，最大 20MB），不再 store 到 public 盘
         try {
             $media = $this->files->upload($request->file('file'), 'resource');
         } catch (\InvalidArgumentException $e) {
@@ -68,6 +68,16 @@ class WorkspaceController extends Controller
         $this->authorize('download', $media);
 
         return $this->files->downloadResponse($media);
+    }
+
+    /**
+     * 在线预览统一入口：授权与下载相同；类型限制由 FileService 判断。
+     */
+    public function filePreview(MediaFile $media)
+    {
+        $this->authorize('download', $media);
+
+        return $this->files->previewResponse($media);
     }
 
     /** P-132 企业微信绑定：展示绑定状态与引导步骤（真实 OAuth 由运维配置 corp_id/secret 后生效） */

@@ -24,4 +24,10 @@ class MediaFile extends Model
     {
         return $this->belongsTo(User::class, 'uploader_id');
     }
+
+    /** 是否允许在线预览（图片 / Excel / PDF / Office），上传下载不受限 */
+    public function canPreview(): bool
+    {
+        return app(\App\Services\FileService::class)->canPreview($this);
+    }
 }

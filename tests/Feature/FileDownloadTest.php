@@ -148,4 +148,21 @@ class FileDownloadTest extends TestCase
             ->assertStatus(200)
             ->assertHeader('content-disposition');
     }
+
+    public function test_any_file_type_can_upload_but_only_office_types_preview(): void
+    {
+        $this->actingAs($this->executor);
+
+        $archive = app(FileService::class)
+            ->upload(UploadedFile::fake()->create('design-package.zip', 10, 'application/zip'), 'resource');
+
+        $this->assertStringEndsWith('.zip', $archive->file_path, '任意类型上传不应被扩展名白名单拦截');
+        $this->assertFalse($archive->canPreview(), 'zip 不在预览白名单');
+        $this->get("/files/{$archive->id}/preview")->assertStatus(415);
+
+        $this->assertTrue($this->resourceFile->canPreview(), 'PDF 应允许预览');
+        $this->get("/files/{$this->resourceFile->id}/preview")
+            ->assertStatus(200)
+            ->assertHeader('content-disposition');
+    }
 }

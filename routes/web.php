@@ -299,6 +299,9 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class, \App\Ht
     // P0-07 / B-02：统一下载入口（登录即可，业务授权在 MediaFilePolicy）
     Route::get('/files/{media}/download', [WorkspaceController::class, 'fileDownload'])
         ->whereNumber('media')->name('files.download');
+    // 在线预览：只放行图片/Excel/PDF/Office，详见 FileService::PREVIEWABLE_EXTENSIONS
+    Route::get('/files/{media}/preview', [WorkspaceController::class, 'filePreview'])
+        ->whereNumber('media')->name('files.preview');
 
     /* ---------- v1.3 S7 后台管理（管理员专属，纯运维，不含任何业务操作） ---------- */
 
@@ -409,10 +412,17 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class, \App\Ht
     // 项目模板（G11）
     Route::middleware('permission:project.template.manage')->group(function () {
         Route::get('/project-templates', [ProjectTemplateController::class, 'index'])->name('project.templates');
+        Route::get('/project-templates/create', [ProjectTemplateController::class, 'create'])->name('project.templates.create');
         Route::post('/project-templates', [ProjectTemplateController::class, 'store'])->name('project.templates.store');
         Route::post('/project-templates/{template}/apply', [ProjectTemplateController::class, 'apply'])
             ->whereNumber('template')->name('project.templates.apply');
     });
+
+    // 创建研发项目页导入模板配置（页面本身在 rnd.create 权限组内）
+    Route::get('/project-templates/{template}/config', [ProjectTemplateController::class, 'config'])
+        ->whereNumber('template')
+        ->middleware('permission:rnd.create')
+        ->name('project.templates.config');
 
     // 支援中心（G12）
     Route::get('/support', [SupportController::class, 'index'])

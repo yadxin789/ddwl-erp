@@ -23,7 +23,7 @@ class RndProject extends Model
         'mass_production' => '量产',
     ];
 
-    protected $fillable = ['project_code', 'project_name', 'product_model', 'creator_id', 'start_date', 'end_date', 'status', 'stage', 'stage_changed_at', 'progress'];
+    protected $fillable = ['project_code', 'project_name', 'product_name', 'product_model', 'version', 'creator_id', 'start_date', 'end_date', 'status', 'stage', 'stage_changed_at', 'progress'];
     protected $casts = ['start_date' => 'date', 'end_date' => 'date', 'stage_changed_at' => 'datetime'];
 
     public function stageLabel(): string

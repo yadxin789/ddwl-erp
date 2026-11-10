@@ -14,32 +14,23 @@ use Illuminate\Support\Str;
  * - 存储位置：storage/app/uploads/{年}/{月}/
  * - 文件名：时间戳 + 随机串 + 原始扩展名（防重名/防路径注入）
  * - 落库 media_files（原始文件名/路径/大小/MIME/分类/上传人/关联业务）
- * - 最大 20MB，类型白名单（图片/Excel/PDF/Office）
+ * - 最大 20MB；上传/下载不限制文件类型
+ * - 在线预览只允许图片、Excel、PDF、Office 常用格式
  */
 class FileService
 {
     /**
-     * 类型白名单：扩展名 => MIME 类型（允许多个）
+     * 允许在线预览的扩展名。上传和下载不受此限制，避免设计文件包（zip/rar/7z/CAD 等）被拦截。
      */
-    private const ALLOWED_TYPES = [
+    public const PREVIEWABLE_EXTENSIONS = [
         // 图片
-        'jpg' => ['image/jpeg'],
-        'jpeg' => ['image/jpeg'],
-        'png' => ['image/png'],
-        'gif' => ['image/gif'],
-        'bmp' => ['image/bmp'],
-        'webp' => ['image/webp'],
-        // Excel
-        'xls' => ['application/vnd.ms-excel', 'application/octet-stream'],
-        'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/octet-stream'],
-        'csv' => ['text/csv', 'application/csv', 'text/plain', 'application/octet-stream'],
+        'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg',
+        // Excel / CSV
+        'xls', 'xlsx', 'csv',
         // PDF
-        'pdf' => ['application/pdf'],
+        'pdf',
         // Office
-        'doc' => ['application/msword', 'application/octet-stream'],
-        'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/octet-stream'],
-        'ppt' => ['application/vnd.ms-powerpoint', 'application/octet-stream'],
-        'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/octet-stream'],
+        'doc', 'docx', 'ppt', 'pptx',
     ];
 
     /**
@@ -68,18 +59,10 @@ class FileService
             throw new \InvalidArgumentException('文件不能超过 20MB');
         }
 
-        // 2. 扩展名 + MIME 白名单校验
+        // 2. 生成文件名。上传不限制类型，保留原扩展名；无扩展名时用 bin 兜底。
         $ext = strtolower($file->getClientOriginalExtension());
-        if (! array_key_exists($ext, self::ALLOWED_TYPES)) {
-            throw new \InvalidArgumentException("不允许的文件类型: {$ext}");
-        }
-
+        $ext = preg_replace('/[^a-z0-9]/', '', $ext) ?: 'bin';
         $mime = $file->getMimeType();
-        $allowedMimes = self::ALLOWED_TYPES[$ext];
-        if (! in_array($mime, $allowedMimes, true)) {
-            // 部分浏览器会识别为 application/octet-stream，兜底放行真实扩展名类型
-            throw new \InvalidArgumentException("文件内容类型与扩展名不匹配: {$mime}");
-        }
 
         // 3. 生成存储路径：uploads/{年}/{月}/时间戳_随机串.ext
         $folder = 'uploads/' . now()->format('Y') . '/' . now()->format('m');
@@ -128,6 +111,40 @@ class FileService
         foreach (['local', 'public'] as $disk) {
             if (Storage::disk($disk)->exists($path)) {
                 return Storage::disk($disk)->download($path, $mediaFile->file_name);
+            }
+        }
+
+        abort(404, '文件不存在或已归档');
+    }
+
+    /**
+     * 是否允许在线预览：只允许图片、Excel/CSV、PDF、Office 常用办公格式。
+     * 上传/下载不受该名单限制。
+     */
+    public function canPreview(MediaFile $mediaFile): bool
+    {
+        $ext = strtolower((string) pathinfo($mediaFile->file_name ?: $mediaFile->file_path, PATHINFO_EXTENSION));
+
+        return in_array($ext, self::PREVIEWABLE_EXTENSIONS, true);
+    }
+
+    /**
+     * 在线预览响应：仅对 canPreview() 放行的类型返回 inline 内容，其余 415。
+     */
+    public function previewResponse(MediaFile $mediaFile)
+    {
+        if (! $this->canPreview($mediaFile)) {
+            abort(415, '该文件类型不支持在线预览，请下载后查看');
+        }
+
+        $path = (string) $mediaFile->file_path;
+        if ($path === '' || str_contains($path, '..') || str_contains($path, '\\') || str_starts_with($path, '/')) {
+            abort(404);
+        }
+
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($path)) {
+                return Storage::disk($disk)->response($path, $mediaFile->file_name, [], 'inline');
             }
         }
 
