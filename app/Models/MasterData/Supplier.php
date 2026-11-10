@@ -2,13 +2,14 @@
 
 namespace App\Models\MasterData;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\HasDataScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Supplier extends Model
 {
-    use HasDataScope;
+    use BelongsToTenant, HasDataScope;
 
     // P0-08：供应商归采购所有（owner_id）+ 归属部门
     protected static ?string $dataScopeOwnerColumn = 'owner_id';
@@ -17,7 +18,7 @@ class Supplier extends Model
     protected $fillable = [
         'supplier_code', 'supplier_name', 'contact_person', 'contact_phone',
         'email', 'address', 'supplier_type', 'payment_terms', 'lead_time_days', 'status',
-        'owner_id', 'department_id',
+        'owner_id', 'department_id', 'tenant_id',
     ];
 
     protected $casts = [

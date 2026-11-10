@@ -64,7 +64,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.submit');
 });
 
-Route::middleware(['auth', \App\Http\Middleware\EnsureMfaVerified::class])->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class, \App\Http\Middleware\EnsureMfaVerified::class])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::post('/password/update', [AuthController::class, 'updatePassword'])->name('password.update');
 

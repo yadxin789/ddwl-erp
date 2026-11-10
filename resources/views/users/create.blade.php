@@ -42,6 +42,15 @@
                     </select>
                 </div>
                 <div class="col-md-6">
+                    <label class="form-label">租户（留空=平台账号，见全量数据）</label>
+                    <select name="tenant_id" class="form-select">
+                        <option value="">平台账号（不隔离）</option>
+                        @foreach ($tenants as $tenant)
+                            <option value="{{ $tenant->id }}" @selected(old('tenant_id') == $tenant->id)>{{ $tenant->code }} · {{ $tenant->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-6">
                     <label class="form-label">状态</label>
                     <select name="status" class="form-select">
                         <option value="1">启用</option>

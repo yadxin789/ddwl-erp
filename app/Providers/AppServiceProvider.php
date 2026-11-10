@@ -10,6 +10,7 @@ use App\Policies\MediaFilePolicy;
 use App\Policies\RndProjectDocumentPolicy;
 use App\Policies\RndProjectPolicy;
 use App\Policies\RndProjectTaskPolicy;
+use App\Support\TenancyContext;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -20,7 +21,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // P3-4：租户上下文按请求作用域隔离，避免跨请求残留
+        $this->app->scoped(TenancyContext::class, fn () => new TenancyContext());
     }
 
     /**

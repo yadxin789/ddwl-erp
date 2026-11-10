@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\User\UserStoreRequest;
 use App\Http\Requests\User\UserUpdateRequest;
+use App\Models\System\Tenant;
 use App\Models\Organization\Department;
 use App\Models\Organization\Position;
 use App\Models\Organization\User;
@@ -33,8 +34,9 @@ class UserController extends Controller
     {
         $departments = Department::where('status', 1)->orderBy('sort_order')->get();
         $roles = \Spatie\Permission\Models\Role::orderBy('name')->get();
+        $tenants = Tenant::orderBy('code')->get();
 
-        return view('users.create', compact('departments', 'roles'));
+        return view('users.create', compact('departments', 'roles', 'tenants'));
     }
 
     public function store(UserStoreRequest $request)
@@ -54,8 +56,9 @@ class UserController extends Controller
         $departments = Department::where('status', 1)->orderBy('sort_order')->get();
         $positions = Position::where('department_id', $user->department_id)->get();
         $roles = \Spatie\Permission\Models\Role::orderBy('name')->get();
+        $tenants = Tenant::orderBy('code')->get();
 
-        return view('users.edit', compact('user', 'departments', 'positions', 'roles'));
+        return view('users.edit', compact('user', 'departments', 'positions', 'roles', 'tenants'));
     }
 
     public function update(UserUpdateRequest $request, User $user)

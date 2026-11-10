@@ -5,20 +5,21 @@ namespace App\Models\Sales;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\HasDataScope;
 use App\Models\MasterData\Customer;
 use App\Models\Organization\User;
 
 class SalesOrder extends Model
 {
-    use HasDataScope;
+    use BelongsToTenant, HasDataScope;
 
     /** 行级数据范围：本人 = 本订单销售员（S5） */
     protected static ?string $dataScopeOwnerColumn = 'salesperson_id';
 
     protected $fillable = [
         'order_no', 'customer_id', 'quote_id', 'order_date', 'delivery_date',
-        'status', 'total_amount', 'shipped_qty', 'remark', 'salesperson_id',
+        'status', 'total_amount', 'shipped_qty', 'remark', 'salesperson_id', 'tenant_id',
     ];
 
     protected $casts = [

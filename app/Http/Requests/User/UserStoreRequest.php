@@ -20,6 +20,7 @@ class UserStoreRequest extends FormRequest
             'password' => ['required', 'string', 'min:6'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'position_id' => ['nullable', 'exists:positions,id'],
+            'tenant_id' => ['nullable', 'exists:tenants,id'],
             'status' => ['required', 'in:0,1'],
             'roles' => ['nullable', 'array'],
             'roles.*' => ['exists:roles,id'],
