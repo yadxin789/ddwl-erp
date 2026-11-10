@@ -25,8 +25,9 @@ class PermissionSeeder extends Seeder
             'system.setting.view', 'system.setting.edit',
             'system.audit.view',
 
-            // 物料主数据
-            'material.view', 'material.create', 'material.edit', 'material.import',
+            // 物料主数据（P2-03：material.view 拆为页面权限 material.list + 业务读取 material.read）
+            'material.list', 'material.read',
+            'material.create', 'material.edit', 'material.import',
             'material.category.view', 'material.category.edit',
             'material.mpn.view', 'material.mpn.create', 'material.mpn.edit',
 
@@ -57,8 +58,9 @@ class PermissionSeeder extends Seeder
             'production.view', 'production.create', 'production.edit', 'production.release',
             'production.report', 'production.receive', 'production.order.view',
 
-            // 质量
-            'quality.view', 'quality.create', 'quality.edit', 'quality.approve',
+            // 质量（P2-03：quality.view 拆为三页权限；quality.operate 管写入）
+            'quality.inspection.view', 'quality.template.view', 'quality.defect.view',
+            'quality.create', 'quality.edit', 'quality.approve',
 
             // 报表（P0-08：按业务域拆分，财务数据不再对全员开放）
             'report.sales', 'report.quality', 'report.supplier', 'report.finance',
@@ -75,7 +77,7 @@ class PermissionSeeder extends Seeder
             // AI
             'ai.view', 'ai.operate', 'ai.provider.manage',
 
-            // 质量（quality.view 已存在）
+            // 质量（查看权限已在上面按页拆分）
             'quality.operate',
             'quality.receipt.inspect',          // 来料检验判定（IQC 专属，收货岗不得判定）
 

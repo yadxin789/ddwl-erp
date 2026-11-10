@@ -163,6 +163,24 @@ class GuardCheck extends Command
             $warnings[] = '以下权限尚无任何角色持有：' . implode('、', $orphans);
         }
 
+        // M8（P2-03）：一个权限横跨 >3 个业务页 = 页面级权限又兼了数据凭据，拆细信号
+        $permPages = [];
+        foreach ($map as $name => $item) {
+            $routeName = $item['route'] ?? '(无路由)';
+            foreach ($item['permissions'] ?? [] as $perm) {
+                if ($perm === '__auth__') {
+                    continue;
+                }
+                $permPages[$perm][$routeName] = true;
+            }
+        }
+        foreach ($permPages as $perm => $routes) {
+            if (count($routes) > 3) {
+                $warnings[] = sprintf('M8 权限 %s 跨 %d 个业务页（%s），应拆细',
+                    $perm, count($routes), implode('、', array_keys($routes)));
+            }
+        }
+
         $this->info(sprintf('岗位/兼容角色：%d 个；共享菜单：%d 项；名称映射：%d 条；权限库：%d 条',
             count($definitions), count($shared), count($map), count($definedPerms)));
 

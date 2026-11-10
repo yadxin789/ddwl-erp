@@ -33,9 +33,9 @@ class RoleSeeder extends Seeder
                 'permissions' => [
                     'warehouse.view', 'warehouse.create', 'warehouse.edit',
                     'inventory.view', 'inventory.operate', 'inventory.adjust', 'inventory.audit', 'inventory.transaction.view',
-                    'material.view',
+                    'material.list', 'material.read',
                     'bom.view',
-                    'quality.view',
+                    'quality.inspection.view', 'quality.template.view', 'quality.defect.view',
                     'purchase.view', 'purchase.receive',
                     'sales.ship',
                 ],
@@ -45,7 +45,7 @@ class RoleSeeder extends Seeder
                 'permissions' => [
                     'warehouse.view',
                     'inventory.view', 'inventory.operate', 'inventory.transaction.view',
-                    'material.view',
+                    'material.list', 'material.read',
                     'bom.view',
                     'purchase.view', 'purchase.receive',
                     'sales.ship',
@@ -56,7 +56,7 @@ class RoleSeeder extends Seeder
                 'permissions' => [
                     'purchase.view', 'purchase.create', 'purchase.edit', 'purchase.receive', 'purchase.return',
                     'supplier.view', 'supplier.create', 'supplier.edit',
-                    'material.view', 'material.mpn.view',
+                    'material.list', 'material.read', 'material.mpn.view',
                     'inventory.view', 'inventory.transaction.view',
                     'report.supplier',
                 ],
@@ -66,7 +66,7 @@ class RoleSeeder extends Seeder
                 'permissions' => [
                     'sales.view', 'sales.create', 'sales.edit', 'sales.ship', 'sales.return',
                     'customer.view', 'customer.create', 'customer.edit',
-                    'material.view',
+                    'material.list', 'material.read',
                     'inventory.view', 'inventory.transaction.view',
                     'report.sales',
                 ],
@@ -74,7 +74,7 @@ class RoleSeeder extends Seeder
             'engineer' => [
                 'label' => '工程师',
                 'permissions' => [
-                    'material.view', 'material.create', 'material.edit', 'material.import',
+                    'material.list', 'material.read', 'material.create', 'material.edit', 'material.import',
                     'material.mpn.view', 'material.mpn.create', 'material.mpn.edit',
                     'bom.view', 'bom.create', 'bom.edit', 'bom.import',
                     'inventory.view',
@@ -83,9 +83,9 @@ class RoleSeeder extends Seeder
             'quality_supervisor' => [
                 'label' => '品质主管',
                 'permissions' => [
-                    'quality.view', 'quality.create', 'quality.edit', 'quality.approve',
+                    'quality.inspection.view', 'quality.template.view', 'quality.defect.view', 'quality.create', 'quality.edit', 'quality.approve',
                     'inventory.view', 'inventory.operate', 'inventory.transaction.view',
-                    'material.view',
+                    'material.list', 'material.read',
                     'bom.view',
                     'purchase.view', 'purchase.receive',
                     'report.quality',

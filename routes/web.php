@@ -69,7 +69,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
 
     // 主数据（RBAC：菜单级 permission）
-    Route::middleware('permission:material.view')->group(function () {
+    Route::middleware('permission:material.list')->group(function () {
         Route::get('/materials', [MaterialController::class, 'index'])->name('materials.index');
     });
     Route::middleware('permission:material.create')->group(function () {
@@ -469,11 +469,15 @@ Route::middleware('auth')->group(function () {
     });
 
     // 质量检验
-    Route::middleware('permission:quality.view')->group(function () {
-        Route::get('/quality/templates', [QualityController::class, 'templates'])->name('quality.templates');
+    Route::middleware('permission:quality.inspection.view')->group(function () {
         Route::get('/quality/pending', [QualityController::class, 'pending'])->name('quality.pending');
         Route::get('/quality/inspections', [QualityController::class, 'inspections'])->name('quality.inspections');
         Route::get('/quality/inspections/create', [QualityController::class, 'inspectionCreate'])->name('quality.inspections.create');
+    });
+    Route::middleware('permission:quality.template.view')->group(function () {
+        Route::get('/quality/templates', [QualityController::class, 'templates'])->name('quality.templates');
+    });
+    Route::middleware('permission:quality.defect.view')->group(function () {
         Route::get('/quality/defects', [QualityController::class, 'defects'])->name('quality.defects');
     });
     Route::middleware('permission:quality.operate')->group(function () {
