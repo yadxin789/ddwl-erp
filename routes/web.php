@@ -339,6 +339,7 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class, \App\Ht
     Route::get('/reports/sales', [ReportController::class, 'sales'])->middleware('permission:report.sales')->name('report.sales');
     Route::get('/reports/quality', [ReportController::class, 'quality'])->middleware('permission:report.quality')->name('report.quality');
     Route::get('/reports/supplier', [ReportController::class, 'supplier'])->middleware('permission:report.supplier')->name('report.supplier');
+    Route::post('/reports/supplier/score', [ReportController::class, 'scoreSupplier'])->middleware('permission:report.supplier')->name('report.supplier.score');
     Route::get('/reports/finance', [ReportController::class, 'finance'])->middleware('permission:report.finance')->name('report.finance');
 
     // 老板驾驶舱：只读汇总，dashboard.view 只发给总经理岗

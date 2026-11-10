@@ -11,7 +11,10 @@ use App\Models\Quality\Defect;
 use App\Models\Quality\InspectionRecord;
 use App\Models\Sales\SalesOrder;
 use App\Models\Sales\SalesOrderLine;
+use App\Services\SupplierPerformanceService;
 use App\Support\DataScopeService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -111,7 +114,7 @@ class ReportController extends Controller
         return view('reports.quality', compact('total', 'qualified', 'defective', 'sample', 'passRate', 'byStage', 'topDefects', 'defectCodes', 'scopeLabel'));
     }
 
-    public function supplier()
+    public function supplier(Request $request, SupplierPerformanceService $performance)
     {
         $receipts = GoodsReceipt::query()->count();
         $receiptQty = (float) GoodsReceipt::query()->sum('total_qty');
@@ -126,10 +129,53 @@ class ReportController extends Controller
 
         $supplierCount = Supplier::count();
 
+        // P3-6：按期读取已生成的供应商绩效快照
+        try {
+            $scoreStart = $request->filled('start') ? Carbon::parse($request->input('start'))->startOfDay() : now()->startOfMonth();
+            $scoreEnd = $request->filled('end') ? Carbon::parse($request->input('end'))->startOfDay() : now()->endOfMonth();
+        } catch (\Throwable) {
+            $scoreStart = now()->startOfMonth();
+            $scoreEnd = now()->endOfMonth();
+        }
+        if ($scoreEnd->lt($scoreStart)) {
+            [$scoreStart, $scoreEnd] = [$scoreEnd, $scoreStart];
+        }
+        $scores = $performance->forPeriod($scoreStart, $scoreEnd);
+
         $scopeLabel = $this->scopeLabel();
 
-        return view('reports.supplier', compact('receipts', 'receiptQty', 'topSuppliers', 'supplierCount', 'scopeLabel'));
+        return view('reports.supplier', compact(
+            'receipts', 'receiptQty', 'topSuppliers', 'supplierCount',
+            'scores', 'scoreStart', 'scoreEnd', 'scopeLabel'
+        ));
     }
+
+    /** P3-6：生成/刷新某周期的供应商绩效快照（幂等，按周期+供应商覆盖）。 */
+    public function scoreSupplier(Request $request, SupplierPerformanceService $performance)
+    {
+        $data = $request->validate([
+            'start' => ['required', 'date'],
+            'end' => ['required', 'date', 'after_or_equal:start'],
+        ]);
+
+        $start = Carbon::parse($data['start'])->startOfDay();
+        $end = Carbon::parse($data['end'])->startOfDay();
+        if ($start->diffInDays($end) > 366) {
+            return back()->withErrors(['score' => '统计区间最长 366 天。']);
+        }
+
+        try {
+            $rows = $performance->generate($start, $end, (int) $request->user()->id);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['score' => $e->getMessage()]);
+        }
+
+        return redirect()->route('report.supplier', [
+            'start' => $start->toDateString(),
+            'end' => $end->toDateString(),
+        ])->with('success', "供应商绩效已生成：{$rows->count()} 家供应商（{$start->toDateString()} ~ {$end->toDateString()}）。");
+    }
+
 
     public function finance()
     {
