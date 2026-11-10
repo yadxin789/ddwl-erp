@@ -1,0 +1,181 @@
+/* ==========================================================================
+   DDWL-ERP 自定义样式
+   深色侧边栏 + 浅色内容区布局（对齐三参考目录统一风格）
+   ========================================================================== */
+
+:root {
+    --sidebar-width: 240px;
+    --sidebar-bg: #1e293b;
+    --sidebar-active: #3b82f6;
+}
+
+body {
+    background: #f1f5f9;
+    font-size: .9rem;
+}
+
+/* ---------- 布局骨架 ---------- */
+
+.app-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ---------- 深色侧边栏 ---------- */
+
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    color: #cbd5e1;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    overflow-y: auto;
+    z-index: 1030;
+    transition: margin-left .25s;
+}
+
+.sidebar .brand {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: 1rem 1.25rem;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.05rem;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.sidebar .brand i {
+    color: var(--sidebar-active);
+}
+
+.sidebar .nav-section {
+    padding: .75rem 1.25rem .35rem;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #64748b;
+}
+
+.sidebar .nav-link {
+    color: #cbd5e1;
+    padding: .55rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    border-left: 3px solid transparent;
+}
+
+.sidebar .nav-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, .06);
+}
+
+.sidebar .nav-link.active {
+    color: #fff;
+    background: rgba(59, 130, 246, .15);
+    border-left-color: var(--sidebar-active);
+}
+
+.sidebar .nav-link i {
+    width: 1.15rem;
+    text-align: center;
+}
+
+/* ---------- 主内容区 ---------- */
+
+.main-content {
+    flex: 1;
+    margin-left: var(--sidebar-width);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ---------- 顶部导航栏 ---------- */
+
+.topbar {
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: .65rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+}
+
+.topbar .page-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.topbar .dropdown-toggle {
+    text-decoration: none;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.topbar .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--sidebar-active);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+/* ---------- 内容区域 ---------- */
+
+.content {
+    padding: 1.5rem;
+    flex: 1;
+}
+
+/* ---------- 卡片与表格 ---------- */
+
+.card {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+}
+
+.card-header {
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 600;
+}
+
+.table th {
+    white-space: nowrap;
+}
+
+/* ---------- 下拉菜单 ---------- */
+
+.dropdown-menu {
+    font-size: .9rem;
+}
+
+/* ---------- 响应式：移动端侧边栏收起 ---------- */
+
+@media (max-width: 991.98px) {
+    .sidebar {
+        margin-left: calc(-1 * var(--sidebar-width));
+    }
+
+    .sidebar.show {
+        margin-left: 0;
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+}

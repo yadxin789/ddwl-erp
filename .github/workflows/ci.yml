@@ -1,0 +1,68 @@
+name: ERP CI Gate
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ddwl_erp_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, pdo_mysql, bcmath, gd, zip, curl
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+          sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/^DB_PORT=.*/DB_PORT=3306/' .env
+          sed -i 's/^DB_DATABASE=.*/DB_DATABASE=ddwl_erp_ci/' .env
+          sed -i 's/^DB_USERNAME=.*/DB_USERNAME=root/' .env
+          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=root/' .env
+
+      - name: PHP lint
+        run: |
+          find app routes database tests bootstrap config -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l > /dev/null
+
+      - name: Route registration
+        run: php artisan route:list --json > /dev/null
+
+      - name: ERP position/permission guard
+        run: php artisan erp:guard:check
+
+      - name: Migrate + seed demo data
+        run: |
+          php artisan migrate:fresh --force
+          php artisan db:seed --force
+
+      - name: Full test suite
+        run: php artisan test
+
+      - name: SoD regression
+        run: php artisan test --filter=SoDTest
