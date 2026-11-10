@@ -1,22 +1,27 @@
 @extends('layouts.admin')
 
-@section('title', '创建新研发项目模板')
+@section('title', $isEdit ? '模板详情' : '创建新研发项目模板')
 
 @section('content')
 @php
     $deptNames = $departments->pluck('dept_name', 'id');
     $deptOrder = $departments->pluck('id')->values();
+    $selectedDepts = $initialConfig['selected_depts'] ?? [];
+    $initialDeptDays = (array) ($initialConfig['dept_days'] ?? []);
 @endphp
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h4 mb-0">创建新研发项目模板</h1>
+    <h1 class="h4 mb-0">{{ $isEdit ? '模板详情' : '创建新研发项目模板' }}</h1>
     <a href="{{ route('project.templates') }}" class="btn btn-outline-secondary btn-sm">
         <i class="fa fa-arrow-left me-1"></i>返回列表
     </a>
 </div>
 
-<form id="templateForm" action="{{ route('project.templates.store') }}" method="POST" onsubmit="return prepareSubmit(event)">
+<form id="templateForm" action="{{ $isEdit ? route('project.templates.update', $template) : route('project.templates.store') }}" method="POST" onsubmit="return prepareSubmit(event)">
     @csrf
+    @if($isEdit)
+        @method('PUT')
+    @endif
 
     <div class="card mb-3">
         <div class="card-header fw-semibold">模板信息</div>
@@ -24,11 +29,11 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">模板名称 <span class="text-danger">*</span></label>
-                    <input type="text" name="name" class="form-control" value="{{ old('name') }}" required maxlength="128">
+                    <input type="text" name="name" class="form-control" value="{{ old('name', $template?->name) }}" required maxlength="128">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">模板描述</label>
-                    <input type="text" name="description" class="form-control" value="{{ old('description') }}" maxlength="2000">
+                    <input type="text" name="description" class="form-control" value="{{ old('description', $template?->description) }}" maxlength="2000">
                 </div>
             </div>
         </div>
@@ -47,7 +52,7 @@
                 <div class="form-check form-check-inline me-4 mb-2">
                     <input class="form-check-input dept-checkbox" type="checkbox"
                            name="selected_depts[]" value="{{ $dept->id }}" id="tpl_dept_{{ $dept->id }}"
-                           data-dept-id="{{ $dept->id }}" checked onchange="onDeptSelectionChange()">
+                           data-dept-id="{{ $dept->id }}" @if($isEdit) @checked(in_array($dept->id, $selectedDepts)) @else checked @endif onchange="onDeptSelectionChange()">
                     <label class="form-check-label" for="tpl_dept_{{ $dept->id }}">{{ $dept->dept_name }}</label>
                 </div>
             @empty
@@ -64,7 +69,7 @@
                     <div class="col-md-3">
                         <label class="form-label">{{ $dept->dept_name }}（天）</label>
                         <input type="number" name="dept_days[{{ $dept->id }}]" class="form-control dept-days"
-                               data-dept-id="{{ $dept->id }}" value="5" min="1" max="365"
+                               data-dept-id="{{ $dept->id }}" value="{{ old('dept_days.'.$dept->id, $initialDeptDays[$dept->id] ?? 5) }}" min="1" max="365"
                                onchange="calculateStats()">
                     </div>
                 @endforeach
@@ -176,6 +181,7 @@
     const defaultExecutors = @json($defaultExecutors);
     const defaultAuditors = @json($defaultAuditors);
     const deptOrder = @json($deptOrder);
+    const initialConfig = @json($initialConfig, JSON_UNESCAPED_UNICODE);
     let taskIndexSeed = {{ $taskTypes->count() }};
 
     function taskRows() {
@@ -242,6 +248,84 @@
         if (!row || row.classList.contains('task-row-base')) return;
         row.remove();
         calculateStats();
+    }
+
+    /** 详情页回填模板配置，支持同一任务类型多行 */
+    function hydrateConfig(data) {
+        const selected = (data.selected_depts || []).map(Number);
+        document.querySelectorAll('.dept-checkbox').forEach(function (checkbox) {
+            checkbox.checked = selected.indexOf(parseInt(checkbox.value, 10)) !== -1;
+        });
+        Object.keys(data.dept_days || {}).forEach(function (deptId) {
+            const input = document.querySelector('.dept-days[data-dept-id="' + deptId + '"]');
+            if (input) input.value = data.dept_days[deptId];
+        });
+
+        const configs = data.tasks || [];
+        const tbody = document.getElementById('taskBody');
+        const baseRows = {};
+
+        taskRows().forEach(function (row) {
+            if (row.classList.contains('task-row-extra')) {
+                row.remove();
+                return;
+            }
+            baseRows[row.dataset.taskTypeId] = row;
+            const enabled = row.querySelector('.task-enabled');
+            if (enabled) enabled.checked = false;
+            row.classList.add('table-secondary');
+            const name = row.querySelector('.task-name');
+            if (name) name.value = row.dataset.taskTypeName || name.value;
+            const deptId = parseInt(row.dataset.deptId || '0', 10);
+            fillUserSelect(row.querySelector('.task-executor'), deptId, null, 'executor');
+            fillUserSelect(row.querySelector('.task-auditor'), deptId, null, 'auditor');
+        });
+
+        const usedType = {};
+        configs.slice().sort(function (a, b) { return (a.sort_order || 0) - (b.sort_order || 0); })
+            .forEach(function (config) {
+                const typeKey = String(config.task_type_id);
+                const base = baseRows[typeKey];
+                if (!base) return;
+
+                let target = base;
+                if (usedType[typeKey]) {
+                    target = cloneTaskRow(base, true);
+                }
+                usedType[typeKey] = true;
+
+                target.dataset.deptId = String(config.department_id || base.dataset.deptId || '');
+                const deptHidden = target.querySelector('input[name*="[department_id]"]');
+                if (deptHidden) deptHidden.value = target.dataset.deptId;
+
+                const enabled = target.querySelector('.task-enabled');
+                if (enabled) enabled.checked = true;
+                target.classList.remove('table-secondary');
+
+                const name = target.querySelector('.task-name');
+                if (name) name.value = config.name || base.dataset.taskTypeName || name.value;
+
+                fillUserSelect(
+                    target.querySelector('.task-executor'),
+                    parseInt(target.dataset.deptId || '0', 10),
+                    config.executor_id,
+                    'executor'
+                );
+                fillUserSelect(
+                    target.querySelector('.task-auditor'),
+                    parseInt(target.dataset.deptId || '0', 10),
+                    config.auditor_id,
+                    'auditor'
+                );
+
+                tbody.appendChild(target);
+            });
+
+        Object.keys(baseRows).forEach(function (typeKey) {
+            if (!usedType[typeKey]) {
+                tbody.appendChild(baseRows[typeKey]);
+            }
+        });
     }
 
     function getSelectedDepts() {
@@ -373,6 +457,9 @@
             fillUserSelect(row.querySelector('.task-executor'), deptId, null, 'executor');
             fillUserSelect(row.querySelector('.task-auditor'), deptId, null, 'auditor');
         });
+        if (initialConfig) {
+            hydrateConfig(initialConfig);
+        }
         onDeptSelectionChange();
         calculateStats();
     });

@@ -132,6 +132,99 @@ class RndProjectCreateTest extends TestCase
         $this->assertSame(['电源原理图', '主控原理图', '驱动原理图'], $names);
     }
 
+    public function test_template_detail_renders_and_can_be_updated(): void
+    {
+        $this->actingAs($this->manager);
+
+        $type = RndTaskType::whereNotNull('department_id')->orderBy('sort_order')->firstOrFail();
+        $deptId = (int) $type->department_id;
+        $task = [
+            'task_type_id' => $type->id,
+            'department_id' => $deptId,
+            'enabled' => '1',
+            'executor_id' => $this->manager->id,
+            'auditor_id' => $this->auditor->id,
+        ];
+
+        $this->post(route('project.templates.store'), [
+            'name' => '待编辑模板',
+            'description' => '原描述',
+            'selected_depts' => [$deptId],
+            'dept_days' => [$deptId => 5],
+            'tasks' => [
+                $task + ['name' => '电源原理图'],
+                $task + ['name' => '主控原理图'],
+            ],
+        ])->assertRedirect(route('project.templates'));
+
+        $template = ProjectTemplate::where('name', '待编辑模板')->firstOrFail();
+
+        $this->get(route('project.templates.show', $template))
+            ->assertOk()
+            ->assertSee('模板详情')
+            ->assertSee('待编辑模板')
+            ->assertSee('电源原理图')
+            ->assertSee('主控原理图');
+
+        $this->put(route('project.templates.update', $template), [
+            'name' => '已编辑模板',
+            'description' => '新描述',
+            'selected_depts' => [$deptId],
+            'dept_days' => [$deptId => 6],
+            'tasks' => [
+                $task + ['name' => '更新后的原理图'],
+            ],
+        ])->assertRedirect(route('project.templates.show', $template));
+
+        $template->refresh();
+        $this->assertSame('已编辑模板', $template->name);
+        $this->assertSame('新描述', $template->description);
+        $this->assertCount(1, $template->taskConfigs());
+        $this->assertSame('更新后的原理图', $template->taskConfigs()[0]['name']);
+        $this->assertSame(6, (int) $template->taskConfigs()[0]['days']);
+    }
+
+    public function test_template_index_has_detail_and_delete_instead_of_apply(): void
+    {
+        $this->actingAs($this->manager);
+
+        $this->get(route('project.templates'))
+            ->assertOk()
+            ->assertSee('详情')
+            ->assertSee('删除')
+            ->assertSee('deleteTemplateModal')
+            ->assertDontSee('用此模板建项目');
+    }
+
+    public function test_template_can_be_deleted(): void
+    {
+        $this->actingAs($this->manager);
+
+        $type = RndTaskType::whereNotNull('department_id')->orderBy('sort_order')->firstOrFail();
+        $deptId = (int) $type->department_id;
+
+        $this->post(route('project.templates.store'), [
+            'name' => '待删除模板',
+            'selected_depts' => [$deptId],
+            'dept_days' => [$deptId => 3],
+            'tasks' => [[
+                'task_type_id' => $type->id,
+                'name' => '待删除任务',
+                'department_id' => $deptId,
+                'enabled' => '1',
+                'executor_id' => $this->manager->id,
+                'auditor_id' => $this->auditor->id,
+            ]],
+        ])->assertRedirect(route('project.templates'));
+
+        $template = ProjectTemplate::where('name', '待删除模板')->firstOrFail();
+
+        $this->delete(route('project.templates.destroy', $template))
+            ->assertRedirect(route('project.templates'));
+
+        $this->assertDatabaseMissing('project_templates', ['id' => $template->id]);
+    }
+
     public function test_template_store_saves_full_task_config(): void
     {
         $this->actingAs($this->manager);

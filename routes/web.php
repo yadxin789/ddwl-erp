@@ -414,6 +414,12 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class, \App\Ht
         Route::get('/project-templates', [ProjectTemplateController::class, 'index'])->name('project.templates');
         Route::get('/project-templates/create', [ProjectTemplateController::class, 'create'])->name('project.templates.create');
         Route::post('/project-templates', [ProjectTemplateController::class, 'store'])->name('project.templates.store');
+        Route::get('/project-templates/{template}', [ProjectTemplateController::class, 'show'])
+            ->whereNumber('template')->name('project.templates.show');
+        Route::put('/project-templates/{template}', [ProjectTemplateController::class, 'update'])
+            ->whereNumber('template')->name('project.templates.update');
+        Route::delete('/project-templates/{template}', [ProjectTemplateController::class, 'destroy'])
+            ->whereNumber('template')->name('project.templates.destroy');
         Route::post('/project-templates/{template}/apply', [ProjectTemplateController::class, 'apply'])
             ->whereNumber('template')->name('project.templates.apply');
     });

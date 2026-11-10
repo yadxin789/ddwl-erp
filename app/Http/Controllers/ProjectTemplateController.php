@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 
 /**
  * 项目模板（G11）：与参考项目 project-template 对齐。
- * 模板保存“部门 + 部门天数 + 任务类型 + 执行人/审核人”的完整配置，创建项目时一次生成任务。
+ * 模板保存“部门 + 部门天数 + 任务类型/任务名称 + 执行人/审核人”的完整配置。
  */
 class ProjectTemplateController extends Controller
 {
@@ -28,6 +28,125 @@ class ProjectTemplateController extends Controller
 
     /** 创建新研发项目模板页 */
     public function create()
+    {
+        return view('project.template-create', $this->formData() + [
+            'template' => null,
+            'initialConfig' => null,
+            'isEdit' => false,
+        ]);
+    }
+
+    /** 模板详情：同一页面可查看、编辑并保存 */
+    public function show(ProjectTemplate $template)
+    {
+        return view('project.template-create', $this->formData() + [
+            'template' => $template,
+            'initialConfig' => $this->configPayload($template),
+            'isEdit' => true,
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        [$base, $steps, $errors] = $this->prepare($request);
+        if ($errors) {
+            return back()->withErrors($errors)->withInput();
+        }
+
+        ProjectTemplate::create([
+            'code' => 'TPL' . now()->format('YmdHis') . strtoupper(substr(uniqid(), -3)),
+            'name' => $base['name'],
+            'description' => $base['description'] ?? null,
+            'user_id' => auth()->id(),
+            'steps' => $steps,
+        ]);
+
+        return redirect()->route('project.templates')->with('success', '模板已创建：' . $base['name']);
+    }
+
+    public function update(Request $request, ProjectTemplate $template)
+    {
+        [$base, $steps, $errors] = $this->prepare($request);
+        if ($errors) {
+            return back()->withErrors($errors)->withInput();
+        }
+
+        $template->update([
+            'name' => $base['name'],
+            'description' => $base['description'] ?? null,
+            'steps' => $steps,
+        ]);
+
+        return redirect()->route('project.templates.show', $template)->with('success', '模板已保存。');
+    }
+
+    public function destroy(ProjectTemplate $template)
+    {
+        $name = $template->name;
+        $template->delete();
+
+        return redirect()->route('project.templates')->with('success', '模板已删除：' . $name);
+    }
+
+    /** 创建项目页“导入模板配置”接口 */
+    public function config(ProjectTemplate $template)
+    {
+        return response()->json($this->configPayload($template));
+    }
+
+    /**
+     * 用模板建项目：按模板配置的部门顺序串行排期，并生成任务。
+     */
+    public function apply(Request $request, ProjectTemplate $template)
+    {
+        $data = $request->validate([
+            'project_name' => ['required', 'string', 'max:128'],
+            'product_model' => ['nullable', 'string', 'max:64'],
+            'start_date' => ['required', 'date'],
+        ]);
+
+        $configs = $template->taskConfigs();
+        $taskTypes = RndTaskType::whereIn('id', collect($configs)->pluck('task_type_id')->filter()->unique()->all())
+            ->get()
+            ->keyBy('id');
+
+        $tasksByDept = [];
+        $selectedDepts = [];
+        $deptDays = [];
+        $defaultExecutor = auth()->id();
+
+        foreach ($configs as $config) {
+            $type = $taskTypes->get((int) ($config['task_type_id'] ?? 0));
+            if (! $type) {
+                continue;
+            }
+            $deptId = (int) ($config['department_id'] ?? $type->department_id ?? 0);
+            if (! $deptId) {
+                continue;
+            }
+            $selectedDepts[$deptId] = $deptId;
+            $deptDays[$deptId] = (int) ($config['days'] ?? 5);
+            $tasksByDept[$deptId][] = [
+                'task_type_id' => (int) $type->id,
+                'name' => $config['name'] ?? $type->name,
+                'department_id' => $deptId,
+                'executor_id' => $config['executor_id'] ?? $defaultExecutor,
+                'auditor_id' => $config['auditor_id'] ?? null,
+            ];
+        }
+
+        $project = $this->service->createProject(
+            $data + ['version' => 'V1.0'],
+            $tasksByDept,
+            array_values($selectedDepts),
+            $deptDays
+        );
+
+        return redirect()->route('rnd.projects.show', $project)->with('success', '项目已按模板创建，任务已生成。');
+    }
+
+    /** 创建/详情页共用的任务类型、部门、人员数据 */
+    private function formData(): array
     {
         $taskTypes = RndTaskType::with('department')
             ->where('is_required', true)
@@ -65,12 +184,11 @@ class ProjectTemplateController extends Controller
             }
         }
 
-        return view('project.template-create', compact(
-            'taskTypes', 'departments', 'usersByDept', 'defaultExecutors', 'defaultAuditors'
-        ));
+        return compact('taskTypes', 'departments', 'usersByDept', 'defaultExecutors', 'defaultAuditors');
     }
 
-    public function store(Request $request)
+    /** 校验并组装 steps，创建与保存共用 */
+    private function prepare(Request $request): array
     {
         $base = $request->validate([
             'name' => ['required', 'string', 'max:128'],
@@ -128,29 +246,18 @@ class ProjectTemplateController extends Controller
             $selectedDepts = RndTaskType::whereIn('id', $steps)->pluck('department_id')->filter()->unique()->values()->all();
         }
 
-        if ($errors) {
-            return back()->withErrors($errors)->withInput();
-        }
-        if (empty($steps)) {
-            return back()->withErrors(['tasks' => '请至少启用一个属于已选部门的任务'])->withInput();
+        if (empty($steps) && empty($errors)) {
+            $errors['tasks'] = '请至少启用一个属于已选部门的任务';
         }
 
-        ProjectTemplate::create([
-            'code' => 'TPL' . now()->format('YmdHis') . strtoupper(substr(uniqid(), -3)),
-            'name' => $base['name'],
-            'description' => $base['description'] ?? null,
-            'user_id' => auth()->id(),
-            'steps' => $steps,
-        ]);
-
-        return redirect()->route('project.templates')->with('success', '模板已创建：' . $base['name']);
+        return [$base, $steps, $errors];
     }
 
-    /** 创建项目页“导入模板配置”接口 */
-    public function config(ProjectTemplate $template)
+    /** 详情页回填 / 导入接口共用 */
+    private function configPayload(ProjectTemplate $template): array
     {
         $configs = $template->taskConfigs();
-        $taskTypes = RndTaskType::whereIn('id', collect($configs)->pluck('task_type_id')->all())
+        $taskTypes = RndTaskType::whereIn('id', collect($configs)->pluck('task_type_id')->filter()->unique()->all())
             ->get()
             ->keyBy('id');
 
@@ -182,61 +289,10 @@ class ProjectTemplateController extends Controller
             ];
         }
 
-        return response()->json([
+        return [
             'selected_depts' => array_values($selectedDepts),
             'dept_days' => (object) $deptDays,
             'tasks' => $rows,
-        ]);
-    }
-
-    /**
-     * 用模板建项目：按模板配置的部门顺序串行排期，并生成任务。
-     */
-    public function apply(Request $request, ProjectTemplate $template)
-    {
-        $data = $request->validate([
-            'project_name' => ['required', 'string', 'max:128'],
-            'product_model' => ['nullable', 'string', 'max:64'],
-            'start_date' => ['required', 'date'],
-        ]);
-
-        $configs = $template->taskConfigs();
-        $taskTypes = RndTaskType::whereIn('id', collect($configs)->pluck('task_type_id')->all())
-            ->get()
-            ->keyBy('id');
-
-        $tasksByDept = [];
-        $selectedDepts = [];
-        $deptDays = [];
-        $defaultExecutor = auth()->id();
-
-        foreach ($configs as $config) {
-            $type = $taskTypes->get((int) ($config['task_type_id'] ?? 0));
-            if (! $type) {
-                continue;
-            }
-            $deptId = (int) ($config['department_id'] ?? $type->department_id ?? 0);
-            if (! $deptId) {
-                continue;
-            }
-            $selectedDepts[$deptId] = $deptId;
-            $deptDays[$deptId] = (int) ($config['days'] ?? 5);
-            $tasksByDept[$deptId][] = [
-                'task_type_id' => (int) $type->id,
-                'name' => $config['name'] ?? $type->name,
-                'department_id' => $deptId,
-                'executor_id' => $config['executor_id'] ?? $defaultExecutor,
-                'auditor_id' => $config['auditor_id'] ?? null,
-            ];
-        }
-
-        $project = $this->service->createProject(
-            $data + ['version' => 'V1.0'],
-            $tasksByDept,
-            array_values($selectedDepts),
-            $deptDays
-        );
-
-        return redirect()->route('rnd.projects.show', $project)->with('success', '项目已按模板创建，任务已生成。');
+        ];
     }
 }
