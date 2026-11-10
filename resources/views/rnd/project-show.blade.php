@@ -51,22 +51,20 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label small">交付物类型</label>
-                <select name="task_type_id" class="form-select form-select-sm" required>
-                    @foreach ($taskTypes as $t) <option value="{{ $t->id }}">{{ $t->name }}</option> @endforeach
+                <select name="task_type_id" id="newTaskType" class="form-select form-select-sm" required>
+                    @foreach ($taskTypes as $t)
+                        <option value="{{ $t->id }}" data-dept-id="{{ $t->department_id }}">{{ $t->name }}</option>
+                    @endforeach
                 </select>
+                <input type="hidden" name="department_id" id="newTaskDept">
             </div>
             <div class="col-md-2">
                 <label class="form-label small">执行人</label>
-                <select name="executor_id" class="form-select form-select-sm" required>
-                    @foreach ($users as $u) <option value="{{ $u->id }}">{{ $u->name }}</option> @endforeach
-                </select>
+                <select name="executor_id" id="newTaskExecutor" class="form-select form-select-sm" required></select>
             </div>
             <div class="col-md-2">
                 <label class="form-label small">审核人</label>
-                <select name="auditor_id" class="form-select form-select-sm">
-                    <option value="">不指定</option>
-                    @foreach ($users as $u) <option value="{{ $u->id }}">{{ $u->name }}</option> @endforeach
-                </select>
+                <select name="auditor_id" id="newTaskAuditor" class="form-select form-select-sm"></select>
             </div>
             <div class="col-md-2">
                 <label class="form-label small">截止日期</label>
@@ -89,8 +87,8 @@
                             <div class="small text-muted">{{ $t->taskType->name }}</div>
                         @endif
                     </td>
-                    <td>{{ $t->executor->name ?? '-' }}</td>
-                    <td>{{ $t->auditor->name ?? '-' }}</td>
+                    <td>{{ $t->executor->username ?? '-' }}</td>
+                    <td>{{ $t->auditor->username ?? '-' }}</td>
                     <td>{{ $t->end_date }}@if($t->is_overdue) <span class="badge bg-danger">逾期</span> @endif</td>
                     <td>{{ $t->status }}</td>
                     <td>
@@ -270,6 +268,46 @@
         </table>
     </div>
 </div>
+
+@push('scripts')
+<script>
+(function () {
+    var usersByDept = @json($usersByDept, JSON_UNESCAPED_UNICODE);
+    var defaultExecutors = @json($defaultExecutors);
+    var defaultAuditors = @json($defaultAuditors);
+    var typeSelect = document.getElementById('newTaskType');
+    if (!typeSelect) return;
+
+    function fill(select, deptId, selectedId, allowEmpty) {
+        if (!select) return;
+        select.innerHTML = '';
+        if (allowEmpty) select.appendChild(new Option('不指定', ''));
+        var list = usersByDept[deptId] || [];
+        if (!list.length) {
+            select.appendChild(new Option('该部门暂无在岗账号', ''));
+            return;
+        }
+        list.forEach(function (user) {
+            select.appendChild(new Option(user.username, user.id));
+        });
+        select.value = selectedId && list.some(function (u) { return String(u.id) === String(selectedId); })
+            ? selectedId
+            : list[0].id;
+    }
+
+    function refresh() {
+        var option = typeSelect.options[typeSelect.selectedIndex];
+        var deptId = option ? (option.dataset.deptId || '') : '';
+        document.getElementById('newTaskDept').value = deptId;
+        fill(document.getElementById('newTaskExecutor'), deptId, defaultExecutors[deptId], false);
+        fill(document.getElementById('newTaskAuditor'), deptId, defaultAuditors[deptId], true);
+    }
+
+    typeSelect.addEventListener('change', refresh);
+    refresh();
+})();
+</script>
+@endpush
 
 @push('scripts')
 <script>

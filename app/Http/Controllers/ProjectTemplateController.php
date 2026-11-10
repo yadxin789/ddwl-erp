@@ -169,9 +169,9 @@ class ProjectTemplateController extends Controller
             }
         });
 
-        $users = User::where('status', 1)->orderBy('name')->get(['id', 'name', 'department_id']);
+        $users = User::where('status', 1)->orderBy('username')->get(['id', 'username', 'department_id']);
         $usersByDept = $users->groupBy('department_id')
-            ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'name' => $u->name])->values()->all())
+            ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'username' => $u->username])->values()->all())
             ->all();
 
         $defaultExecutors = [];

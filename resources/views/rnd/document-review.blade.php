@@ -26,7 +26,7 @@
                             <div class="small text-muted">{{ $doc->task->taskType->name }}</div>
                         @endif
                     </td>
-                    <td>{{ $doc->task->executor->name ?? '-' }}</td>
+                    <td>{{ $doc->task->executor->username ?? '-' }}</td>
                     <td>{{ $doc->uploader->name ?? '-' }}</td>
                     <td class="small">
                         v{{ $doc->version_no }} ·

@@ -45,7 +45,8 @@ class RndProjectCreateTest extends TestCase
             ->assertSee('选择参与部门')
             ->assertSee('部门天数配置')
             ->assertSee('任务配置')
-            ->assertSee('任务名称');
+            ->assertSee('任务名称')
+            ->assertSee('"username":"rnd-manager"', false);
     }
 
     public function test_template_create_page_renders(): void
@@ -55,7 +56,8 @@ class RndProjectCreateTest extends TestCase
         $this->get(route('project.templates.create'))
             ->assertOk()
             ->assertSee('创建新研发项目模板')
-            ->assertSee('任务名称');
+            ->assertSee('任务名称')
+            ->assertSee('"username":"rnd-manager"', false);
     }
 
     public function test_project_store_creates_named_tasks_with_serial_department_dates(): void
@@ -98,6 +100,10 @@ class RndProjectCreateTest extends TestCase
         $this->assertSame($deptId, (int) $task->department_id);
         $this->assertSame(now()->toDateString(), $task->start_date->toDateString());
         $this->assertSame(now()->addDays(4)->toDateString(), $task->end_date->toDateString());
+
+        $this->get(route('rnd.projects.show', $project))
+            ->assertOk()
+            ->assertSee('"username":"' . $this->manager->username . '"', false);
     }
 
     public function test_project_store_accepts_multiple_tasks_of_same_type(): void

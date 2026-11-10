@@ -365,7 +365,7 @@
             return;
         }
         list.forEach(function (user) {
-            select.appendChild(new Option(user.name, user.id));
+            select.appendChild(new Option(user.username, user.id));
         });
         const defaults = type === 'executor' ? defaultExecutors : defaultAuditors;
         select.value = selectedId || defaults[deptId] || list[0].id;

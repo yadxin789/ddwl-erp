@@ -55,9 +55,9 @@ class RndController extends Controller
             }
         });
 
-        $users = User::where('status', 1)->orderBy('name')->get(['id', 'name', 'department_id']);
+        $users = User::where('status', 1)->orderBy('username')->get(['id', 'username', 'department_id']);
         $usersByDept = $users->groupBy('department_id')
-            ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'name' => $u->name])->values()->all())
+            ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'username' => $u->username])->values()->all())
             ->all();
 
         $defaultExecutors = [];
@@ -153,8 +153,21 @@ class RndController extends Controller
         $this->authorize('view', $project);
 
         $project->load(['creator', 'tasks.taskType', 'tasks.executor', 'documents.file', 'documents.uploader']);
-        $taskTypes = RndTaskType::orderBy('sort_order')->get();
-        $users = User::where('status', 1)->get();   // users 表没有 is_active 列，用 status=1 表示在岗
+        $taskTypes = RndTaskType::with('department')->orderBy('sort_order')->get();
+
+        $users = User::where('status', 1)->orderBy('username')->get(['id', 'username', 'department_id']);
+        $usersByDept = $users->groupBy('department_id')
+            ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'username' => $u->username])->values()->all())
+            ->all();
+
+        $defaultExecutors = [];
+        $defaultAuditors = [];
+        foreach ($usersByDept as $deptId => $group) {
+            if ($deptId && ! empty($group)) {
+                $defaultExecutors[$deptId] = $group[0]['id'];
+                $defaultAuditors[$deptId] = $group[0]['id'];
+            }
+        }
 
         // P1-05：基线图档 + 变更单 + 可选 BOM
         $baseline = $project->documents->firstWhere('is_baseline', true);
@@ -166,7 +179,9 @@ class RndController extends Controller
             ->get();
         $boms = \App\Models\Bom\BomHeader::orderByDesc('id')->limit(50)->get();
 
-        return view('rnd.project-show', compact('project', 'taskTypes', 'users', 'baseline', 'ecrs', 'boms'));
+        return view('rnd.project-show', compact(
+            'project', 'taskTypes', 'usersByDept', 'defaultExecutors', 'defaultAuditors', 'baseline', 'ecrs', 'boms'
+        ));
     }
 
     /* ---------- P1-05 阶段门 / 基线 / ECR ---------- */
