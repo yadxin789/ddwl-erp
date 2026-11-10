@@ -648,6 +648,12 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class, \App\Ht
         Route::post('/ecom/onboarding/custom', [EcomOnboardingController::class, 'customStore'])->name('ecom.onboarding.custom.store');
         Route::post('/ecom/onboarding/{platformKey}', [EcomOnboardingController::class, 'store'])->name('ecom.onboarding.store');
         Route::post('/ecom/instances/{instance}/toggle', [EcomOnboardingController::class, 'toggle'])->whereNumber('instance')->name('ecom.instances.toggle');
+
+        // P3-08 交易闭环：拉单 / 对账 / 发货回写 outbox 处理
+        Route::post('/ecom/orders/sync', [EcomController::class, 'syncOrders'])->name('ecom.orders.sync');
+        Route::post('/ecom/orders/reconcile', [EcomController::class, 'reconcile'])->name('ecom.orders.reconcile');
+        Route::post('/ecom/outbox/dispatch', [EcomController::class, 'dispatchOutbox'])->name('ecom.outbox.dispatch');
+        Route::post('/ecom/outbox/retry-dead', [EcomController::class, 'retryDeadOutbox'])->name('ecom.outbox.retry-dead');
     });
 
     // 财务应收应付

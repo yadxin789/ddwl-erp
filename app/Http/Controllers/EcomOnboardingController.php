@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Validator;
 
 /**
  * P1-07 电商接入：向导（三步）+ 平台设置页 + 手动添加任意平台
- * 本期只交付"配得对、连得上、可扩展"，订单拉取/发货回写默认关闭。
+ * P1-07 只交付"配得对、连得上、可扩展"；P3-08 起订单拉取/发货回写由 EcomController 的交易闭环承接。
  */
 class EcomOnboardingController extends Controller
 {
@@ -187,7 +187,7 @@ class EcomOnboardingController extends Controller
         ]);
         Log::info('电商平台实例启停', ['instance_id' => $model->id, 'status' => $model->status, 'user_id' => Auth::id()]);
 
-        return back()->with('success', $model->status ? '平台已启用（订单拉取仍为待接入）。' : '平台已停用：不再产生任何同步任务。');
+        return back()->with('success', $model->status ? '平台已启用：将按同步频率拉取订单（manual 需手动触发）。' : '平台已停用：不再产生任何同步任务。');
     }
 
     /** 渲染表单并带错误（200，不抛 500） */

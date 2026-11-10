@@ -15,7 +15,7 @@ class PlatformInstance extends Model
         'platform_key', 'name', 'region', 'credentials_json', 'mapping_json',
         'api_base_url', 'auth_type', 'callback_url', 'default_warehouse_id',
         'sync_frequency', 'status', 'last_check_at', 'last_check_result',
-        'last_check_message', 'expires_at', 'created_by',
+        'last_check_message', 'last_synced_at', 'expires_at', 'created_by',
     ];
 
     protected $casts = [
@@ -23,6 +23,7 @@ class PlatformInstance extends Model
         'mapping_json' => 'array',
         'status' => 'boolean',
         'last_check_at' => 'datetime',
+        'last_synced_at' => 'datetime',
         'expires_at' => 'date',
     ];
 

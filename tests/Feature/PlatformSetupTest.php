@@ -49,8 +49,8 @@ class PlatformSetupTest extends TestCase
             ->assertSee('App Key')
             ->assertSee('open.taobao.com');
 
-        // 平台设置页
-        $this->get(route('ecom.instances'))->assertOk()->assertSee('还没有接入任何平台');
+        // 平台设置页（P3-08 起有离线演示店铺）
+        $this->get(route('ecom.instances'))->assertOk()->assertSee('演示店铺（离线）');
     }
 
     public function test_wizard_saves_instance_with_encrypted_credentials(): void
@@ -125,7 +125,7 @@ class PlatformSetupTest extends TestCase
         ]);
         $this->assertNotNull($adapter);
         $this->assertSame('custom:my-mall', $adapter->key());
-        $this->assertFalse($adapter->capabilities()['pullOrders'], '本期订单拉取必须为待接入（false）');
+        $this->assertTrue($adapter->capabilities()['pullOrders'], 'P3-08 起订单拉取能力开启');
         $this->assertSame('paid', $adapter->mapStatus('PAID'));
     }
 
@@ -139,10 +139,12 @@ class PlatformSetupTest extends TestCase
             $adapter = $registry->make($key);
             $this->assertNotNull($adapter, "预置 {$key} 必须有适配器");
             $caps = $adapter->capabilities();
-            foreach (['pullOrders', 'pushShipment', 'ackOrder'] as $cap) {
+            foreach (['pullOrders', 'pushShipment'] as $cap) {
                 $this->assertArrayHasKey($cap, $caps, "{$key} 缺少能力声明 {$cap}");
-                $this->assertFalse($caps[$cap], "{$key} 的 {$cap} 本期必须为 false（待接入）");
+                $this->assertTrue($caps[$cap], "{$key} 的 {$cap} 在 P3-08 应开启");
             }
+            $this->assertArrayHasKey('ackOrder', $caps);
+            $this->assertFalse($caps['ackOrder'], "{$key} 的 ackOrder 仍为待接入");
 
             // 缺凭证必须给可读错误，不能抛异常
             $check = $adapter->verifyCredentials([]);

@@ -32,6 +32,8 @@ class DatabaseSeeder extends Seeder
             ApprovalFlowSeeder::class,
             // v1.3 S6b：项目模板预置（2 个可点样例）
             ProjectTemplateSeeder::class,
+            // P3-08 电商交易闭环演示店铺与订单（不配置外部接口，不发真实请求）
+            EcomDemoSeeder::class,
         ]);
     }
 }

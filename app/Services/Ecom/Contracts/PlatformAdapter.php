@@ -24,4 +24,16 @@ interface PlatformAdapter
 
     /** 平台状态 → 本地状态 */
     public function mapStatus(string $platformStatus): string;
+
+    /**
+     * P3-08 拉取订单：返回统一结构（order_no/status/金额/收件人/items）。
+     * 未配置接口地址或调用失败时抛 DomainException，由同步服务转成可读错误。
+     */
+    public function fetchOrders(array $credentials, array $options = []): array;
+
+    /**
+     * P3-08 发货回写：成功返回 ok=true，失败返回 ok=false + message（不抛给调用方）。
+     * @return array{ok:bool,message:string}
+     */
+    public function pushShipment(array $credentials, array $payload, array $options = []): array;
 }
