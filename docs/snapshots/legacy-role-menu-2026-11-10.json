@@ -1,0 +1,380 @@
+{
+    "generated_at": "2026-11-10 02:07:19",
+    "summary": {
+        "deadline": "2026-12-31",
+        "rehearsal": "2026-12-17",
+        "days_left": 51,
+        "legacy_roles": 7,
+        "legacy_bound_accounts": 7,
+        "legacy_pending": 6,
+        "compat_roles": 4,
+        "compat_bound_accounts": 0,
+        "pending_total": 6
+    },
+    "legacy": [
+        {
+            "role": "system_admin",
+            "target_key": "role_sys_admin",
+            "target_role": "role_sys_admin",
+            "bound": [],
+            "whitelisted": [
+                "admin"
+            ],
+            "target_assigned": true
+        },
+        {
+            "role": "warehouse_supervisor",
+            "target_key": "role_wh_supervisor",
+            "target_role": "role_wh_supervisor",
+            "bound": [
+                "wh-supervisor"
+            ],
+            "whitelisted": [],
+            "target_assigned": true
+        },
+        {
+            "role": "warehouse_keeper",
+            "target_key": "role_wh_keeper",
+            "target_role": "role_wh_keeper",
+            "bound": [
+                "wh-keeper"
+            ],
+            "whitelisted": [],
+            "target_assigned": true
+        },
+        {
+            "role": "purchase_specialist",
+            "target_key": "role_pur_specialist",
+            "target_role": "role_pur_specialist",
+            "bound": [
+                "purchase"
+            ],
+            "whitelisted": [],
+            "target_assigned": true
+        },
+        {
+            "role": "sales_specialist",
+            "target_key": "role_sal_specialist",
+            "target_role": "role_sal_specialist",
+            "bound": [
+                "sales"
+            ],
+            "whitelisted": [],
+            "target_assigned": true
+        },
+        {
+            "role": "engineer",
+            "target_key": "role_eng_hw",
+            "target_role": "role_eng_hw",
+            "bound": [
+                "engineer"
+            ],
+            "whitelisted": [],
+            "target_assigned": true
+        },
+        {
+            "role": "quality_supervisor",
+            "target_key": "role_qc_manager",
+            "target_role": "role_qc_manager",
+            "bound": [
+                "quality"
+            ],
+            "whitelisted": [],
+            "target_assigned": true
+        }
+    ],
+    "compat": [
+        {
+            "key": "role_project_creator",
+            "name": "项目创建人",
+            "legacy_of": "role_rnd_manager",
+            "bound": [],
+            "menu": [
+                "工作台",
+                "项目模板",
+                "研发项目",
+                "我的任务",
+                "我的待办",
+                "审批中心",
+                "消息通知",
+                "聊天室",
+                "知识库",
+                "AI 助手",
+                "个人资料",
+                "资料文件",
+                "企业微信绑定",
+                "我的项目列表"
+            ]
+        },
+        {
+            "key": "role_task_executor",
+            "name": "项目任务执行人",
+            "legacy_of": "role_eng_hw \/ role_eng_sw \/ role_eng_me \/ role_pkg_designer \/ role_id_designer",
+            "bound": [],
+            "menu": [
+                "工作台",
+                "研发项目",
+                "我的任务",
+                "文档上传",
+                "我的待办",
+                "审批中心",
+                "消息通知",
+                "聊天室",
+                "知识库",
+                "AI 助手",
+                "个人资料",
+                "资料文件",
+                "企业微信绑定",
+                "我的项目列表"
+            ]
+        },
+        {
+            "key": "role_task_auditor",
+            "name": "项目任务审核人",
+            "legacy_of": "role_rnd_manager（或各部门主管）",
+            "bound": [],
+            "menu": [
+                "工作台",
+                "研发项目",
+                "文档审核",
+                "我的待办",
+                "审批中心",
+                "消息通知",
+                "聊天室",
+                "知识库",
+                "AI 助手",
+                "个人资料",
+                "资料文件",
+                "企业微信绑定",
+                "我的项目列表"
+            ]
+        },
+        {
+            "key": "role_support_staff",
+            "name": "其它非项目参与人员",
+            "legacy_of": "支援人员（无对应岗位角色）",
+            "bound": [],
+            "menu": [
+                "工作台",
+                "支援中心",
+                "我的待办",
+                "审批中心",
+                "消息通知",
+                "聊天室",
+                "知识库",
+                "AI 助手",
+                "个人资料",
+                "资料文件",
+                "企业微信绑定",
+                "我的项目列表"
+            ]
+        }
+    ],
+    "accounts": {
+        "admin": {
+            "roles": [
+                "system_admin",
+                "role_sys_admin"
+            ],
+            "position_name": "系统管理员",
+            "business": [
+                "用户管理|http:\/\/127.0.0.1:8000\/users",
+                "部门管理|http:\/\/127.0.0.1:8000\/admin\/departments",
+                "岗位管理|http:\/\/127.0.0.1:8000\/admin\/positions",
+                "角色管理|http:\/\/127.0.0.1:8000\/roles",
+                "权限管理|http:\/\/127.0.0.1:8000\/admin\/permissions",
+                "AI 开通与设置|http:\/\/127.0.0.1:8000\/admin\/ai-guide",
+                "企业微信设置|http:\/\/127.0.0.1:8000\/wecom",
+                "系统运维|http:\/\/127.0.0.1:8000\/devops",
+                "同步任务|http:\/\/127.0.0.1:8000\/sync\/tasks",
+                "接口日志|http:\/\/127.0.0.1:8000\/platform\/api-logs",
+                "状态映射|http:\/\/127.0.0.1:8000\/platform\/status-mappings",
+                "事件队列|http:\/\/127.0.0.1:8000\/events\/outbox",
+                "多租户|http:\/\/127.0.0.1:8000\/tenants",
+                "安全审计|http:\/\/127.0.0.1:8000\/security\/logs"
+            ],
+            "shared": [
+                "我的待办|http:\/\/127.0.0.1:8000\/todos",
+                "审批中心|http:\/\/127.0.0.1:8000\/approvals",
+                "消息通知|http:\/\/127.0.0.1:8000\/notifications",
+                "聊天室|http:\/\/127.0.0.1:8000\/chat\/rooms",
+                "知识库|http:\/\/127.0.0.1:8000\/knowledge",
+                "AI 助手|http:\/\/127.0.0.1:8000\/ai\/chat",
+                "个人资料|http:\/\/127.0.0.1:8000\/profile",
+                "资料文件|http:\/\/127.0.0.1:8000\/files\/resources",
+                "企业微信绑定|http:\/\/127.0.0.1:8000\/profile\/wecom",
+                "我的项目列表|http:\/\/127.0.0.1:8000\/project\/my"
+            ]
+        },
+        "wh-supervisor": {
+            "roles": [
+                "warehouse_supervisor",
+                "role_wh_supervisor"
+            ],
+            "position_name": "仓库主管",
+            "business": [
+                "库存查询|http:\/\/127.0.0.1:8000\/inventory",
+                "库存流水|http:\/\/127.0.0.1:8000\/inventory\/transactions",
+                "盘点单|http:\/\/127.0.0.1:8000\/production\/stocktakes",
+                "收货单|http:\/\/127.0.0.1:8000\/purchase\/receipts",
+                "发货作业|http:\/\/127.0.0.1:8000\/shipping",
+                "仓库库位|http:\/\/127.0.0.1:8000\/warehouse",
+                "库存调整|http:\/\/127.0.0.1:8000\/inventory\/adjustments",
+                "物料查询|http:\/\/127.0.0.1:8000\/materials"
+            ],
+            "shared": [
+                "我的待办|http:\/\/127.0.0.1:8000\/todos",
+                "审批中心|http:\/\/127.0.0.1:8000\/approvals",
+                "消息通知|http:\/\/127.0.0.1:8000\/notifications",
+                "聊天室|http:\/\/127.0.0.1:8000\/chat\/rooms",
+                "知识库|http:\/\/127.0.0.1:8000\/knowledge",
+                "AI 助手|http:\/\/127.0.0.1:8000\/ai\/chat",
+                "个人资料|http:\/\/127.0.0.1:8000\/profile",
+                "资料文件|http:\/\/127.0.0.1:8000\/files\/resources",
+                "企业微信绑定|http:\/\/127.0.0.1:8000\/profile\/wecom",
+                "我的项目列表|http:\/\/127.0.0.1:8000\/project\/my"
+            ]
+        },
+        "wh-keeper": {
+            "roles": [
+                "warehouse_keeper",
+                "role_wh_keeper"
+            ],
+            "position_name": "仓管",
+            "business": [
+                "库存查询|http:\/\/127.0.0.1:8000\/inventory",
+                "库存流水|http:\/\/127.0.0.1:8000\/inventory\/transactions",
+                "盘点录入|http:\/\/127.0.0.1:8000\/production\/stocktakes",
+                "收货上架|http:\/\/127.0.0.1:8000\/purchase\/receipts\/pending",
+                "发货作业|http:\/\/127.0.0.1:8000\/shipping",
+                "领料发料|http:\/\/127.0.0.1:8000\/production\/issues",
+                "库存调整|http:\/\/127.0.0.1:8000\/inventory\/adjustments"
+            ],
+            "shared": [
+                "我的待办|http:\/\/127.0.0.1:8000\/todos",
+                "审批中心|http:\/\/127.0.0.1:8000\/approvals",
+                "消息通知|http:\/\/127.0.0.1:8000\/notifications",
+                "聊天室|http:\/\/127.0.0.1:8000\/chat\/rooms",
+                "知识库|http:\/\/127.0.0.1:8000\/knowledge",
+                "AI 助手|http:\/\/127.0.0.1:8000\/ai\/chat",
+                "个人资料|http:\/\/127.0.0.1:8000\/profile",
+                "资料文件|http:\/\/127.0.0.1:8000\/files\/resources",
+                "企业微信绑定|http:\/\/127.0.0.1:8000\/profile\/wecom",
+                "我的项目列表|http:\/\/127.0.0.1:8000\/project\/my"
+            ]
+        },
+        "purchase": {
+            "roles": [
+                "purchase_specialist",
+                "role_pur_specialist"
+            ],
+            "position_name": "采购专员",
+            "business": [
+                "采购申请|http:\/\/127.0.0.1:8000\/purchase\/requisitions",
+                "采购订单|http:\/\/127.0.0.1:8000\/purchase\/orders",
+                "收货进度|http:\/\/127.0.0.1:8000\/purchase\/receipts",
+                "采购计划|http:\/\/127.0.0.1:8000\/procurement\/plans",
+                "MRP 采购建议|http:\/\/127.0.0.1:8000\/procurement\/mrp",
+                "供应商档案|http:\/\/127.0.0.1:8000\/suppliers",
+                "物料查询|http:\/\/127.0.0.1:8000\/materials",
+                "库存查询|http:\/\/127.0.0.1:8000\/inventory"
+            ],
+            "shared": [
+                "我的待办|http:\/\/127.0.0.1:8000\/todos",
+                "审批中心|http:\/\/127.0.0.1:8000\/approvals",
+                "消息通知|http:\/\/127.0.0.1:8000\/notifications",
+                "聊天室|http:\/\/127.0.0.1:8000\/chat\/rooms",
+                "知识库|http:\/\/127.0.0.1:8000\/knowledge",
+                "AI 助手|http:\/\/127.0.0.1:8000\/ai\/chat",
+                "个人资料|http:\/\/127.0.0.1:8000\/profile",
+                "资料文件|http:\/\/127.0.0.1:8000\/files\/resources",
+                "企业微信绑定|http:\/\/127.0.0.1:8000\/profile\/wecom",
+                "我的项目列表|http:\/\/127.0.0.1:8000\/project\/my"
+            ]
+        },
+        "sales": {
+            "roles": [
+                "sales_specialist",
+                "role_sal_specialist"
+            ],
+            "position_name": "销售专员",
+            "business": [
+                "报价单|http:\/\/127.0.0.1:8000\/sales\/quotes",
+                "销售订单|http:\/\/127.0.0.1:8000\/sales\/orders",
+                "客户退货|http:\/\/127.0.0.1:8000\/sales\/returns",
+                "客户档案|http:\/\/127.0.0.1:8000\/customers",
+                "销售线索|http:\/\/127.0.0.1:8000\/crm\/leads",
+                "销售商机|http:\/\/127.0.0.1:8000\/crm\/opportunities",
+                "跟进记录|http:\/\/127.0.0.1:8000\/crm\/follow-ups",
+                "库存查询|http:\/\/127.0.0.1:8000\/inventory"
+            ],
+            "shared": [
+                "我的待办|http:\/\/127.0.0.1:8000\/todos",
+                "审批中心|http:\/\/127.0.0.1:8000\/approvals",
+                "消息通知|http:\/\/127.0.0.1:8000\/notifications",
+                "聊天室|http:\/\/127.0.0.1:8000\/chat\/rooms",
+                "知识库|http:\/\/127.0.0.1:8000\/knowledge",
+                "AI 助手|http:\/\/127.0.0.1:8000\/ai\/chat",
+                "个人资料|http:\/\/127.0.0.1:8000\/profile",
+                "资料文件|http:\/\/127.0.0.1:8000\/files\/resources",
+                "企业微信绑定|http:\/\/127.0.0.1:8000\/profile\/wecom",
+                "我的项目列表|http:\/\/127.0.0.1:8000\/project\/my"
+            ]
+        },
+        "engineer": {
+            "roles": [
+                "engineer",
+                "role_eng_hw"
+            ],
+            "position_name": "硬件工程师",
+            "business": [
+                "物料主数据|http:\/\/127.0.0.1:8000\/materials",
+                "BOM管理|http:\/\/127.0.0.1:8000\/bom",
+                "BOM导入|http:\/\/127.0.0.1:8000\/bom\/import",
+                "工艺路线|http:\/\/127.0.0.1:8000\/production\/routings",
+                "工作中心|http:\/\/127.0.0.1:8000\/production\/work-centers",
+                "研发项目|http:\/\/127.0.0.1:8000\/rnd\/projects",
+                "我的任务|http:\/\/127.0.0.1:8000\/rnd\/my-tasks"
+            ],
+            "shared": [
+                "我的待办|http:\/\/127.0.0.1:8000\/todos",
+                "审批中心|http:\/\/127.0.0.1:8000\/approvals",
+                "消息通知|http:\/\/127.0.0.1:8000\/notifications",
+                "聊天室|http:\/\/127.0.0.1:8000\/chat\/rooms",
+                "知识库|http:\/\/127.0.0.1:8000\/knowledge",
+                "AI 助手|http:\/\/127.0.0.1:8000\/ai\/chat",
+                "个人资料|http:\/\/127.0.0.1:8000\/profile",
+                "资料文件|http:\/\/127.0.0.1:8000\/files\/resources",
+                "企业微信绑定|http:\/\/127.0.0.1:8000\/profile\/wecom",
+                "我的项目列表|http:\/\/127.0.0.1:8000\/project\/my"
+            ]
+        },
+        "quality": {
+            "roles": [
+                "quality_supervisor",
+                "role_qc_manager"
+            ],
+            "position_name": "品质主管",
+            "business": [
+                "检验记录|http:\/\/127.0.0.1:8000\/quality\/inspections",
+                "检验模板维护|http:\/\/127.0.0.1:8000\/quality\/templates",
+                "缺陷代码维护|http:\/\/127.0.0.1:8000\/quality\/defects",
+                "收货检验|http:\/\/127.0.0.1:8000\/purchase\/receipts",
+                "质量报表|http:\/\/127.0.0.1:8000\/reports\/quality",
+                "物料查询|http:\/\/127.0.0.1:8000\/materials"
+            ],
+            "shared": [
+                "我的待办|http:\/\/127.0.0.1:8000\/todos",
+                "审批中心|http:\/\/127.0.0.1:8000\/approvals",
+                "消息通知|http:\/\/127.0.0.1:8000\/notifications",
+                "聊天室|http:\/\/127.0.0.1:8000\/chat\/rooms",
+                "知识库|http:\/\/127.0.0.1:8000\/knowledge",
+                "AI 助手|http:\/\/127.0.0.1:8000\/ai\/chat",
+                "个人资料|http:\/\/127.0.0.1:8000\/profile",
+                "资料文件|http:\/\/127.0.0.1:8000\/files\/resources",
+                "企业微信绑定|http:\/\/127.0.0.1:8000\/profile\/wecom",
+                "我的项目列表|http:\/\/127.0.0.1:8000\/project\/my"
+            ]
+        }
+    }
+}

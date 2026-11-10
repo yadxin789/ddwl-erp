@@ -379,6 +379,10 @@ return [
      * 旧角色名 → 新岗位键（迁移期兼容；S1 角色重建验收后可整段删除）
      * 现有 7 个历史角色仍被 seeder、演示账号与少量路由使用，
      * 折算到新岗位可避免"登录后菜单全空"。
+     *
+     * 【倒计时 · Q5 / P2-02】2026-12-31 正式停用，2026-12-17 完成回收演练；
+     * 停用后本段整段删除，`erp:legacy-role:audit --strict` 必须报 0 条非白名单绑定。
+     * 白名单：admin 保留 system_admin 作为系统账号留档（见 legacy_role_whitelist）。
      */
     'legacy_role_map' => [
         'system_admin' => 'role_sys_admin',
@@ -388,6 +392,15 @@ return [
         'sales_specialist' => 'role_sal_specialist',
         'engineer' => 'role_eng_hw',
         'quality_supervisor' => 'role_qc_manager',
+    ],
+
+    /** 旧角色停用日 / 演练日（Asia/Shanghai） */
+    'legacy_role_deadline' => '2026-12-31',
+    'legacy_role_rehearsal' => '2026-12-17',
+
+    /** 白名单：账号 => 允许保留的旧角色（留档，不计入"待回收"） */
+    'legacy_role_whitelist' => [
+        'admin' => ['system_admin'],
     ],
 
     'menu_items' => [

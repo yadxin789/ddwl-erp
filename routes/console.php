@@ -10,3 +10,12 @@ Artisan::command('inspire', function () {
 
 // 每天凌晨 2 点检查研发任务逾期/今日到期
 Schedule::command('rnd:check-deadlines')->dailyAt('02:00')->timezone('Asia/Shanghai');
+
+// P2-02：每周一巡检旧角色/兼容角色回收进度（输出到日志）
+Schedule::command('erp:legacy-role:audit')->weeklyOn(1, '08:00')->timezone('Asia/Shanghai');
+
+// P2-02：到达 Q5 停用日（2026-12-31）后每天自动回收一次；命令幂等，无旧角色时为空操作
+Schedule::command('erp:legacy-role:migrate --force')
+    ->dailyAt('00:30')
+    ->timezone('Asia/Shanghai')
+    ->when(fn () => now()->toDateString() >= (string) config('navigation.legacy_role_deadline'));
