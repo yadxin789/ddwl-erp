@@ -33,6 +33,10 @@ class User extends Authenticatable
         'status',
         'last_login_at',
         'last_login_ip',
+        'mfa_secret',
+        'mfa_recovery_codes',
+        'mfa_enabled_at',
+        'mfa_last_verified_at',
     ];
 
     /**
@@ -43,6 +47,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'mfa_secret',
+        'mfa_recovery_codes',
     ];
 
     /**
@@ -58,6 +64,10 @@ class User extends Authenticatable
         'status' => 'integer',
         'wecom_bound_at' => 'datetime',
         'last_login_at' => 'datetime',
+        'mfa_secret' => 'encrypted',
+        'mfa_recovery_codes' => 'array',
+        'mfa_enabled_at' => 'datetime',
+        'mfa_last_verified_at' => 'datetime',
     ];
 
     /**

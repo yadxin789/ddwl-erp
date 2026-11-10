@@ -42,6 +42,11 @@
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
+                        <a class="dropdown-item" href="{{ route('mfa.setup') }}">
+                            <i class="fa-solid fa-shield-halved me-2"></i>账号安全 / 二次验证
+                        </a>
+                    </li>
+                    <li>
                         <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#changePwdModal">
                             <i class="fa-solid fa-key me-2"></i>修改密码
                         </button>

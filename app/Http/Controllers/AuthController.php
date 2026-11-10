@@ -76,6 +76,9 @@ class AuthController extends Controller
 
         Auth::login($user, $request->boolean('remember'));
 
+        // P3-3：每次登录都重新过二次验证，避免旧会话标记沿用
+        $request->session()->forget(['mfa_verified_at', 'mfa_user_id', 'mfa_setup_secret']);
+
         // 登录成功：清除失败计数
         LoginFailure::where('username', $credentials['account'])->where('ip_address', $ip)->delete();
 

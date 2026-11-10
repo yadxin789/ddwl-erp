@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\MfaController;
 use App\Http\Controllers\ProjectTemplateController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\AdminController;
@@ -63,9 +64,16 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.submit');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\EnsureMfaVerified::class])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::post('/password/update', [AuthController::class, 'updatePassword'])->name('password.update');
+
+    // P3-3 MFA/TOTP（中间件放行 mfa.*，避免验证前被自己拦住）
+    Route::get('/mfa/setup', [MfaController::class, 'setup'])->name('mfa.setup');
+    Route::post('/mfa/enable', [MfaController::class, 'enable'])->name('mfa.enable');
+    Route::get('/mfa/verify', [MfaController::class, 'verifyForm'])->name('mfa.verify');
+    Route::post('/mfa/verify', [MfaController::class, 'verify'])->name('mfa.verify.submit');
+    Route::post('/mfa/disable', [MfaController::class, 'disable'])->name('mfa.disable');
 
     // 工作台
     Route::get('/', [HomeController::class, 'index'])->name('home');
