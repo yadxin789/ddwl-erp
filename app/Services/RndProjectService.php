@@ -272,12 +272,22 @@ class RndProjectService
             $seq = EcrChangeOrder::withoutGlobalScopes()->whereDate('created_at', today())->count() + 1;
             $changeNo = 'ECR-' . now()->format('Ymd') . '-' . str_pad((string) $seq, 3, '0', STR_PAD_LEFT);
 
+            $materialIds = array_values(array_map('intval', $data['impacted_material_ids'] ?? []));
+            $replacementIds = array_values(array_map('intval', $data['replacement_material_ids'] ?? []));
+            $impact = app(\App\Support\EcrImpactService::class)->analyze((int) $data['bom_id'], array_merge($materialIds, $replacementIds));
+
             $ecr = EcrChangeOrder::create([
                 'change_no' => $changeNo,
                 'project_id' => (int) $data['project_id'],
                 'bom_id' => (int) $data['bom_id'],
                 'change_type' => $data['change_type'] ?? 'bom',
+                'priority' => $data['priority'] ?? 'normal',
+                'effective_date' => $data['effective_date'] ?? null,
                 'title' => $data['title'],
+                'scope_description' => $data['scope_description'] ?? null,
+                'impacted_material_ids' => $materialIds,
+                'replacement_material_ids' => $replacementIds,
+                'impact_analysis' => $impact,
                 'reason' => $data['reason'],
                 'applicant_id' => Auth::id() ?? 0,
                 'status' => EcrChangeOrder::STATUS_PENDING,
@@ -311,27 +321,37 @@ class RndProjectService
             $nextVersion = 'V' . ((int) preg_replace('/[^0-9]/', '', (string) $old->version) + 1);
             // bom_code 唯一（uk_bom_code），新版本用 "<原编码>-V2" 区分版本
             $newCode = substr($old->bom_code . '-' . $nextVersion, 0, 32);
+            $effectiveDate = $ecr->effective_date?->toDateString() ?? now()->toDateString();
+            $ecoSeq = EcrChangeOrder::withoutGlobalScopes()->whereDate('eco_executed_at', today())->count() + 1;
+            $ecoNo = 'ECO-' . now()->format('Ymd') . '-' . str_pad((string) $ecoSeq, 3, '0', STR_PAD_LEFT);
             $new = \App\Models\Bom\BomHeader::create([
                 'bom_code' => $newCode,
                 'product_material_id' => $old->product_material_id,
                 'version' => $nextVersion,
                 'status' => 'active',
-                'effective_date' => now()->toDateString(),
+                'effective_date' => $effectiveDate,
                 'remark' => "ECR {$ecr->change_no}：{$ecr->title}",
                 'created_by' => Auth::id() ?? (int) $ecr->applicant_id,
                 'approved_by' => $approverId ?? Auth::id(),
                 'approved_at' => now(),
             ]);
+            $replaceMap = [];
+            $impactIds = (array) ($ecr->impacted_material_ids ?? []);
+            $replacementIds = (array) ($ecr->replacement_material_ids ?? []);
+            if ($impactIds && count($impactIds) === count($replacementIds)) {
+                $replaceMap = array_combine($impactIds, $replacementIds);
+            }
             foreach ($old->lines as $line) {
+                $newMaterialId = $replaceMap[$line->material_id] ?? $line->material_id;
                 \App\Models\Bom\BomLine::create([
                     'bom_header_id' => $new->id,
                     'parent_material_id' => $line->parent_material_id,
-                    'material_id' => $line->material_id,
+                    'material_id' => $newMaterialId,
                     'qty_per' => $line->qty_per,
                     'unit' => $line->unit,
                     'loss_rate' => $line->loss_rate,
                     'sort_order' => $line->sort_order,
-                    'remark' => 'ECR 版本复制',
+                    'remark' => $newMaterialId !== $line->material_id ? 'ECR 替代料：' . $line->material_id . '→' . $newMaterialId : 'ECR 版本复制',
                 ]);
             }
             $old->update(['status' => 'superseded']);
@@ -341,8 +361,10 @@ class RndProjectService
                 'approver_id' => $approverId ?? Auth::id(),
                 'approved_at' => now(),
                 'new_bom_id' => $new->id,
+                'eco_no' => $ecoNo,
+                'eco_executed_at' => now(),
             ]);
-            Log::info('ECR 已批准并生成新 BOM 版本', ['ecr' => $ecr->change_no, 'new_bom_id' => $new->id]);
+            Log::info('ECR 已批准并生成新 BOM 版本', ['ecr' => $ecr->change_no, 'eco' => $ecoNo, 'new_bom_id' => $new->id]);
 
             return $ecr;
         });

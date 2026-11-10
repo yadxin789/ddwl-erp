@@ -6,6 +6,7 @@ use App\Models\Bom\BomHeader;
 use App\Models\Bom\BomLine;
 use App\Models\MasterData\Material;
 use App\Models\Organization\User;
+use App\Models\Production\ProductionOrder;
 use App\Models\Rnd\EcrChangeOrder;
 use App\Models\Rnd\RndExtensionApplication;
 use App\Models\Rnd\RndProject;
@@ -121,6 +122,70 @@ class RndPlmTest extends TestCase
             'auditor_id' => $auditStatus === 'approved' ? $this->managerId : null,
             'audit_at' => $auditStatus === 'approved' ? now() : null,
         ]);
+    }
+
+    public function test_ecr_full_form_impact_and_eco_number(): void
+    {
+        $manager = User::where('username', 'rnd-manager')->firstOrFail();
+        $applicant = User::where('username', 'eng-sw')->firstOrFail();
+        $this->actingAs($applicant);
+
+        ProductionOrder::withoutGlobalScopes()->create([
+            'order_no' => 'WO-ECR-' . substr((string) uniqid(), -5),
+            'product_material_id' => $this->materialId,
+            'bom_id' => $this->bomId,
+            'routing_id' => null,
+            'plan_qty' => 100,
+            'completed_qty' => 10,
+            'status' => 'released',
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addDays(5)->toDateString(),
+            'created_by' => $manager->id,
+        ]);
+
+        $impact = $this->get(route('rnd.ecr.impact', $this->projectId) . '?bom_id=' . $this->bomId);
+        $impact->assertOk();
+        $impact->assertJsonPath('open_work_orders.count', 1);
+        $impact->assertJsonPath('open_work_orders.remaining_qty', 90);
+        $impact->assertJsonPath('risk_level', 'high');
+
+        $materialCode = (string) Material::where('id', $this->materialId)->value('material_code');
+        $replacementId = (int) Material::where('id', '!=', $this->materialId)->value('id');
+        $replacementCode = (string) Material::where('id', $replacementId)->value('material_code');
+        $effective = now()->addDays(7)->toDateString();
+        $response = $this->post(route('rnd.ecr.store', $this->projectId), [
+            'bom_id' => $this->bomId,
+            'change_type' => 'material',
+            'priority' => 'high',
+            'effective_date' => $effective,
+            'title' => '电容替代料切换',
+            'scope_description' => 'SMT 贴片段 + BOM 第 3 行',
+            'impacted_material_codes' => $materialCode,
+            'replacement_material_codes' => $replacementCode,
+            'reason' => '原厂停产，切换为同规格替代料并验证温漂',
+        ]);
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+
+        $ecr = EcrChangeOrder::withoutGlobalScopes()->where('project_id', $this->projectId)->orderByDesc('id')->firstOrFail();
+        $this->assertSame('high', $ecr->priority);
+        $this->assertSame([$this->materialId], $ecr->impacted_material_ids);
+        $this->assertSame([$replacementId], $ecr->replacement_material_ids);
+        $this->assertSame($effective, $ecr->effective_date?->toDateString());
+        $this->assertSame('high', $ecr->impact_analysis['risk_level']);
+        $this->assertSame(1, $ecr->impact_analysis['open_work_orders']['count']);
+
+        $this->actingAs($manager);
+        app(RndProjectService::class)->approveEcr($ecr->id, $manager->id);
+        $approved = EcrChangeOrder::withoutGlobalScopes()->findOrFail($ecr->id);
+        $this->assertNotNull($approved->eco_no);
+        $this->assertStringStartsWith('ECO-', $approved->eco_no);
+        $this->assertNotNull($approved->eco_executed_at);
+        $this->assertSame($effective, BomHeader::findOrFail($approved->new_bom_id)->effective_date?->toDateString());
+        $this->assertTrue(
+            BomLine::where('bom_header_id', $approved->new_bom_id)->where('material_id', $replacementId)->exists(),
+            'ECO 应把受影响物料替换为替代物料'
+        );
     }
 
     public function test_stage_gate_requires_baseline_and_blocks_pending_ecr(): void

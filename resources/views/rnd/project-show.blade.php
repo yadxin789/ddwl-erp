@@ -156,17 +156,17 @@
 <div class="card mt-3">
     <div class="card-header">工程变更单（ECR / ECO）</div>
     <div class="card-body">
-        @if ($errors->has('bom_id') || $errors->has('title') || $errors->has('reason'))
-            <div class="alert alert-danger py-1 small">{{ $errors->first('bom_id') ?: $errors->first('title') ?: $errors->first('reason') }}</div>
+        @if ($errors->any())
+            <div class="alert alert-danger py-1 small">{{ $errors->first() }}</div>
         @endif
         @can('manage', $project)
-        <form method="POST" action="{{ route('rnd.ecr.store', $project) }}" class="row g-2 mb-3 align-items-end">
+        <form method="POST" action="{{ route('rnd.ecr.store', $project) }}" class="row g-2 mb-2 align-items-end">
             @csrf
             <div class="col-md-3">
                 <label class="form-label small">受影响 BOM</label>
-                <select name="bom_id" class="form-select form-select-sm" required>
+                <select name="bom_id" id="ecr-bom" class="form-select form-select-sm" required>
                     @foreach ($boms as $b)
-                        <option value="{{ $b->id }}">{{ $b->bom_code }} {{ $b->version }} @if($b->status !== 'active')（{{ $b->status }}）@endif</option>
+                        <option value="{{ $b->id }}" @selected(old('bom_id') == $b->id)>{{ $b->bom_code }} {{ $b->version }} @if($b->status !== 'active')（{{ $b->status }}）@endif</option>
                     @endforeach
                 </select>
             </div>
@@ -176,33 +176,73 @@
                     <option value="bom">BOM 结构</option>
                     <option value="material">替代料</option>
                     <option value="process">工艺</option>
+                    <option value="document">图档</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">优先级</label>
+                <select name="priority" class="form-select form-select-sm">
+                    <option value="normal">一般</option>
+                    <option value="high">紧急</option>
+                    <option value="low">低</option>
                 </select>
             </div>
             <div class="col-md-3">
+                <label class="form-label small">计划生效日</label>
+                <input type="date" name="effective_date" value="{{ old('effective_date') }}" min="{{ now()->toDateString() }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <button type="button" id="ecr-preview" class="btn btn-sm btn-outline-info w-100">预览影响</button>
+            </div>
+            <div class="col-md-6">
                 <label class="form-label small">变更标题</label>
-                <input name="title" class="form-control form-control-sm" required maxlength="128">
+                <input name="title" value="{{ old('title') }}" class="form-control form-control-sm" required maxlength="128">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small">变更范围（工序/图档/装配）</label>
+                <input name="scope_description" value="{{ old('scope_description') }}" class="form-control form-control-sm" maxlength="500">
             </div>
             <div class="col-md-3">
+                <label class="form-label small">受影响物料编码（留空=整个 BOM）</label>
+                <input name="impacted_material_codes" value="{{ old('impacted_material_codes') }}" class="form-control form-control-sm" maxlength="1000" placeholder="EL000001,RM000002">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">替代物料编码（与上一栏一一对应）</label>
+                <input name="replacement_material_codes" value="{{ old('replacement_material_codes') }}" class="form-control form-control-sm" maxlength="1000" placeholder="EL000002">
+            </div>
+            <div class="col-md-5">
                 <label class="form-label small">变更原因</label>
-                <input name="reason" class="form-control form-control-sm" required maxlength="1000">
+                <input name="reason" value="{{ old('reason') }}" class="form-control form-control-sm" required maxlength="1000">
             </div>
             <div class="col-md-1"><button class="btn btn-sm btn-primary w-100">提交</button></div>
         </form>
+        <div id="ecr-impact-panel" class="alert alert-light border small d-none mb-3"></div>
         @endcan
         <table class="table table-sm table-bordered align-middle mb-0">
-            <thead class="table-light"><tr><th>变更单号</th><th>标题</th><th>类型</th><th>受影响 BOM</th><th>申请人</th><th>状态</th><th>新版本 BOM</th></tr></thead>
+            <thead class="table-light"><tr><th>变更单号</th><th>标题</th><th>类型/优先级</th><th>受影响 BOM</th><th>影响评估</th><th>申请人</th><th>状态</th><th>ECO / 新版本</th></tr></thead>
             <tbody>
                 @forelse ($ecrs as $e)
                 <tr>
-                    <td class="font-monospace">{{ $e->change_no }}</td>
-                    <td>{{ $e->title }}</td>
-                    <td>{{ $e->change_type }}</td>
+                    <td class="font-monospace">{{ $e->change_no }}@if($e->effective_date)<div class="small text-muted">生效 {{ $e->effective_date->format('Y-m-d') }}</div>@endif</td>
+                    <td>{{ $e->title }}@if($e->scope_description)<div class="small text-muted">{{ $e->scope_description }}</div>@endif</td>
+                    <td>{{ $e->change_type }}<div class="small text-muted">{{ $e->priority ?? 'normal' }}</div></td>
                     <td>{{ $e->bom->bom_code ?? '-' }} {{ $e->bom->version ?? '' }}</td>
-                    <td>{{ $e->applicant->name ?? '-' }}</td>
-                    <td>
-                        <span class="badge bg-{{ $e->status === 'approved' ? 'success' : ($e->status === 'rejected' ? 'danger' : 'warning text-dark') }}">{{ $e->status }}</span>
+                    <td class="small">
+                        @php $ia = $e->impact_analysis ?? []; @endphp
+                        @if (! empty($ia))
+                            <span class="badge bg-{{ ($ia['risk_level'] ?? 'low') === 'high' ? 'danger' : (($ia['risk_level'] ?? 'low') === 'medium' ? 'warning text-dark' : 'secondary text-dark') }}">{{ $ia['risk_level'] ?? 'low' }}</span>
+                            工单 {{ $ia['open_work_orders']['count'] ?? 0 }} / 在库物料 {{ count($ia['materials'] ?? []) }} / 波及单 {{ $ia['affected_sales_orders']['count'] ?? 0 }}
+                            <div class="text-muted">{{ implode('；', $ia['risk_flags'] ?? []) ?: '无风险提示' }}</div>
+                        @else
+                            <span class="text-muted">-</span>
+                        @endif
                     </td>
+                    <td>{{ $e->applicant->name ?? '-' }}</td>
+                    <td><span class="badge bg-{{ $e->status === 'approved' ? 'success' : ($e->status === 'rejected' ? 'danger' : 'warning text-dark') }}">{{ $e->status }}</span></td>
                     <td>
+                        @if ($e->eco_no)
+                            <div class="font-monospace small">{{ $e->eco_no }}</div>
+                        @endif
                         @if ($e->newBom)
                             {{ $e->newBom->bom_code }} {{ $e->newBom->version }}
                         @else
@@ -211,10 +251,43 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="7" class="text-muted">暂无变更单</td></tr>
+                <tr><td colspan="8" class="text-muted">暂无变更单</td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 </div>
+
+@push('scripts')
+<script>
+(function () {
+    var btn = document.getElementById('ecr-preview');
+    if (!btn) return;
+    var panel = document.getElementById('ecr-impact-panel');
+    var bom = document.getElementById('ecr-bom');
+    btn.addEventListener('click', function () {
+        if (!bom || !bom.value) return;
+        panel.classList.remove('d-none');
+        panel.textContent = '正在计算影响……';
+        fetch(@json(route('rnd.ecr.impact', $project)) + '?bom_id=' + encodeURIComponent(bom.value), {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        }).then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        }).then(function (d) {
+            var flags = (d.risk_flags && d.risk_flags.length) ? d.risk_flags.join('；') : '无风险提示';
+            panel.innerHTML =
+                '<div><strong>影响等级：</strong>' + d.risk_level +
+                '　<strong>BOM：</strong>' + d.bom.code + ' ' + d.bom.version +
+                '　<strong>物料行：</strong>' + d.bom.line_count + '</div>' +
+                '<div><strong>未完工工单：</strong>' + d.open_work_orders.count + ' 张（剩余 ' + d.open_work_orders.remaining_qty + '）；' +
+                '<strong>波及销售单：</strong>' + d.affected_sales_orders.count + ' 张</div>' +
+                '<div class="text-danger">' + flags + '</div>';
+        }).catch(function (e) {
+            panel.textContent = '影响分析失败：' + e.message;
+        });
+    });
+})();
+</script>
+@endpush
 @endsection

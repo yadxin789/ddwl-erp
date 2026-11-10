@@ -429,6 +429,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/rnd/projects/{project}/stage', [RndController::class, 'projectStage'])->whereNumber('project')->name('rnd.projects.stage');
         Route::post('/rnd/documents/{document}/baseline', [RndController::class, 'documentBaseline'])->whereNumber('document')->name('rnd.documents.baseline');
         Route::post('/rnd/projects/{project}/ecr', [RndController::class, 'ecrStore'])->whereNumber('project')->name('rnd.ecr.store');
+        Route::get('/rnd/projects/{project}/ecr/impact', [RndController::class, 'ecrImpact'])->whereNumber('project')->name('rnd.ecr.impact');
 
         // P1-05：我的任务 开始 / 提交 / 审核
         Route::post('/rnd/tasks/{task}/start', [RndController::class, 'taskStart'])->whereNumber('task')->name('rnd.tasks.start');

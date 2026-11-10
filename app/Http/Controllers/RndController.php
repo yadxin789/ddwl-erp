@@ -99,14 +99,48 @@ class RndController extends Controller
         $this->authorize('manage', $project);
         $data = $request->validate([
             'bom_id' => ['required', 'exists:bom_headers,id'],
-            'change_type' => ['required', 'in:bom,material,process'],
+            'change_type' => ['required', 'in:bom,material,process,document'],
+            'priority' => ['nullable', 'in:low,normal,high'],
+            'effective_date' => ['nullable', 'date', 'after_or_equal:today'],
             'title' => ['required', 'string', 'max:128'],
+            'scope_description' => ['nullable', 'string', 'max:500'],
+            'impacted_material_codes' => ['nullable', 'string', 'max:1000'],
+            'replacement_material_codes' => ['nullable', 'string', 'max:1000'],
             'reason' => ['required', 'string', 'max:1000'],
         ]);
+
+        try {
+            $ids = app(\App\Support\EcrImpactService::class)
+                ->resolveMaterialCodes((string) ($data['impacted_material_codes'] ?? ''));
+            $replacementIds = app(\App\Support\EcrImpactService::class)
+                ->resolveMaterialCodes((string) ($data['replacement_material_codes'] ?? ''));
+        } catch (\DomainException $e) {
+            return back()->withErrors(['impacted_material_codes' => $e->getMessage()])->withInput();
+        }
+
+        if ($replacementIds && count($replacementIds) !== count($ids)) {
+            return back()->withErrors(['replacement_material_codes' => '替代物料数量必须与受影响物料一一对应（' . count($ids) . ' 项）。'])->withInput();
+        }
+
         $data['project_id'] = $project->id;
+        $data['impacted_material_ids'] = $ids;
+        $data['replacement_material_ids'] = $replacementIds;
+        unset($data['impacted_material_codes'], $data['replacement_material_codes']);
+
         $ecr = $this->service->createEcr($data);
 
-        return back()->with('success', "变更单 {$ecr->change_no} 已提交，等待研发经理审批；批准后才生成新 BOM 版本。");
+        return back()->with('success', "变更单 {$ecr->change_no} 已提交（影响等级：" . ($ecr->impact_analysis['risk_level'] ?? 'low') . "），等待研发经理审批；批准后生成 ECO 与新 BOM 版本。");
+    }
+
+    /** P3-1：提交前预览影响分析（JSON） */
+    public function ecrImpact(Request $request, RndProject $project)
+    {
+        $this->authorize('manage', $project);
+        $data = $request->validate(['bom_id' => ['required', 'exists:bom_headers,id']]);
+
+        $impact = app(\App\Support\EcrImpactService::class)->analyze((int) $data['bom_id']);
+
+        return response()->json($impact);
     }
 
     /* ---------- P1-05 我的任务：开始 / 提交 / 审核 ---------- */

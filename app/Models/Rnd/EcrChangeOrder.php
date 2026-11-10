@@ -22,11 +22,19 @@ class EcrChangeOrder extends Model
     public const STATUS_REJECTED = 'rejected';
 
     protected $fillable = [
-        'change_no', 'project_id', 'bom_id', 'change_type', 'title', 'reason',
-        'applicant_id', 'status', 'approver_id', 'approved_at', 'new_bom_id',
+        'change_no', 'project_id', 'bom_id', 'change_type', 'priority', 'effective_date',
+        'title', 'scope_description', 'impacted_material_ids', 'replacement_material_ids', 'impact_analysis', 'reason',
+        'applicant_id', 'status', 'approver_id', 'approved_at', 'new_bom_id', 'eco_no', 'eco_executed_at',
     ];
 
-    protected $casts = ['approved_at' => 'datetime'];
+    protected $casts = [
+        'approved_at' => 'datetime',
+        'effective_date' => 'date',
+        'impacted_material_ids' => 'array',
+        'replacement_material_ids' => 'array',
+        'impact_analysis' => 'array',
+        'eco_executed_at' => 'datetime',
+    ];
 
     public function project(): BelongsTo
     {
