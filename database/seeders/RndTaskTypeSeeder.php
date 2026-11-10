@@ -65,15 +65,18 @@ class RndTaskTypeSeeder extends Seeder
 
         $sort = 1;
         foreach ($types as [$name, $desc, $required, $deptCode]) {
-            RndTaskType::updateOrCreate(
-                ['name' => $name],
+            RndTaskType::firstOrCreate(
+                ['code' => sprintf('RND-TT-%03d', $sort)],
                 [
+                    'name' => $name,
                     'description' => $desc,
                     'department_id' => $deptMap[$deptCode] ?? null,
                     'is_required' => $required,
-                    'sort_order' => $sort++,
+                    'sort_order' => $sort,
+                    'status' => true,
                 ]
             );
+            $sort++;
         }
     }
 }

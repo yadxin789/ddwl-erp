@@ -151,6 +151,7 @@ class PermissionSeeder extends Seeder
             'admin.department.manage',
             'admin.position.manage',
             'admin.permission.manage',
+            'admin.masterdata.manage',
             'ai.guide.manage',
         ];
 

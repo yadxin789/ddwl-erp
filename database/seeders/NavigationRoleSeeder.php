@@ -55,7 +55,7 @@ class NavigationRoleSeeder extends Seeder
         $existing = Permission::pluck('name')->all();
 
         $map = [
-            'role_sys_admin' => ['admin.department.manage', 'admin.permission.manage', 'admin.position.manage', 'ai.guide.manage', 'ai.provider.manage', 'system.devops', 'system.event', 'system.platform', 'system.role.create', 'system.role.edit', 'system.role.view', 'system.security.view', 'system.sync', 'system.tenant', 'system.user.create', 'system.user.delete', 'system.user.edit', 'system.user.view', 'system.wecom'],   // 系统管理员
+            'role_sys_admin' => ['admin.department.manage', 'admin.masterdata.manage', 'admin.permission.manage', 'admin.position.manage', 'ai.guide.manage', 'ai.provider.manage', 'system.devops', 'system.event', 'system.platform', 'system.role.create', 'system.role.edit', 'system.role.view', 'system.security.view', 'system.sync', 'system.tenant', 'system.user.create', 'system.user.delete', 'system.user.edit', 'system.user.view', 'system.wecom'],   // 系统管理员
             'role_prod_manager' => ['inventory.stocktake', 'inventory.view', 'material.list', 'material.read', 'production.complete', 'production.create', 'production.issue.approve', 'production.issue.request', 'production.order.view', 'production.release', 'production.report', 'production.view', 'purchase.view', 'quality.inspection.view'],   // 生产主管
             'role_prod_leader' => ['inventory.adjust.request', 'inventory.stocktake', 'inventory.view', 'material.list', 'material.read', 'production.issue.request', 'production.order.view', 'production.report', 'production.view'],   // 生产组长（可发起盘点调整，审批归仓库主管）
             'role_prod_operator' => ['production.order.view', 'production.report', 'production.view'],   // 作业员
@@ -121,7 +121,7 @@ class NavigationRoleSeeder extends Seeder
             'system.devops', 'system.tenant', 'system.wecom', 'system.sync', 'system.platform',
             'system.event', 'system.security.view', 'system.approval.view', 'system.voice',
             'ai.view', 'ai.provider.manage', 'ai.guide.manage',
-            'admin.department.manage', 'admin.position.manage', 'admin.permission.manage',
+            'admin.department.manage', 'admin.position.manage', 'admin.permission.manage', 'admin.masterdata.manage',
         ];
         $systemGranted = array_values(array_intersect($systemWhitelist, $existing));
 

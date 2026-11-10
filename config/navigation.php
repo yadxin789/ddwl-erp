@@ -27,7 +27,7 @@ return [
             'roles' => ['role_sys_admin'],
             'menu' => [
                 '工作台',
-                '用户管理', '部门管理', '岗位管理', '角色管理', '权限管理',
+                '用户管理', '部门管理', '岗位管理', '角色管理', '权限管理', '基础数据管理',
                 'AI 开通与设置', '企业微信设置',
                 '系统运维', '系统可观测', '同步任务', '接口日志', '状态映射', '事件队列', '多租户', '安全审计',
                 '我的待办', '审批中心', '消息通知', '聊天室', '知识库', 'AI 助手', '个人资料',
@@ -420,6 +420,7 @@ return [
         '岗位管理' => ['route' => 'admin.positions', 'permissions' => ['admin.position.manage']],
         '角色管理' => ['route' => 'roles.index', 'permissions' => ['system.role.create', 'system.role.edit', 'system.role.view']],
         '权限管理' => ['route' => 'admin.permissions', 'permissions' => ['admin.permission.manage']],
+        '基础数据管理' => ['route' => 'admin.master-data', 'permissions' => ['admin.masterdata.manage']],
         'AI 开通与设置' => ['route' => 'ai.guide', 'permissions' => ['ai.guide.manage', 'ai.provider.manage']],
         '企业微信设置' => ['route' => 'wecom.index', 'permissions' => ['system.wecom']],
         '系统运维' => ['route' => 'devops.index', 'permissions' => ['system.devops']],

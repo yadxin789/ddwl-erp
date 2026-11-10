@@ -34,6 +34,7 @@ class RndController extends Controller
     public function projectCreate()
     {
         $taskTypes = RndTaskType::with('department')
+            ->where('status', 1)
             ->where('is_required', true)
             ->orderBy('sort_order')
             ->get();
@@ -153,7 +154,7 @@ class RndController extends Controller
         $this->authorize('view', $project);
 
         $project->load(['creator', 'tasks.taskType', 'tasks.executor', 'documents.file', 'documents.uploader']);
-        $taskTypes = RndTaskType::with('department')->orderBy('sort_order')->get();
+        $taskTypes = RndTaskType::with('department')->where('status', 1)->orderBy('sort_order')->get();
 
         $users = User::where('status', 1)->orderBy('username')->get(['id', 'username', 'department_id']);
         $usersByDept = $users->groupBy('department_id')
@@ -401,20 +402,6 @@ class RndController extends Controller
         $types = RndTaskType::orderBy('sort_order')->paginate(50);
 
         return view('rnd.task-types', compact('types'));
-    }
-
-    public function taskTypeStore(Request $request)
-    {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:64', 'unique:rnd_task_types,name'],
-            'description' => ['nullable', 'string', 'max:255'],
-            'is_required' => ['boolean'],
-        ]);
-        $data['sort_order'] = (RndTaskType::max('sort_order') ?? 0) + 1;
-        $data['is_required'] = $request->boolean('is_required');
-        RndTaskType::create($data);
-
-        return back()->with('success', '任务类型已添加。');
     }
 
     /* ---------- 延期申请 ---------- */

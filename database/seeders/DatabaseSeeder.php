@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             // v1.3：部门 10 个 + 岗位 29 个（含岗位→角色绑定），由 config/navigation.php 驱动
             PositionSeeder::class,
+            // 基础数据归口台账（每类基础数据一个归口部门）
+            MasterDataDomainSeeder::class,
             WarehouseSeeder::class,
             NumberSequenceSeeder::class,
             AdminSeeder::class,

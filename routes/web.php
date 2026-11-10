@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\MfaController;
+use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\ProjectTemplateController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\AdminController;
@@ -319,6 +320,21 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class, \App\Ht
             ->whereNumber('position')->name('admin.positions.update');
     });
 
+    Route::middleware('permission:admin.masterdata.manage')->group(function () {
+        Route::get('/admin/master-data', [MasterDataController::class, 'index'])->name('admin.master-data');
+        Route::put('/admin/master-data/domains/{domain}', [MasterDataController::class, 'updateDomain'])
+            ->whereNumber('domain')->name('admin.master-data.domains.update');
+
+        Route::get('/admin/master-data/task-types', [MasterDataController::class, 'taskTypes'])
+            ->name('admin.master-data.task-types');
+        Route::post('/admin/master-data/task-types', [MasterDataController::class, 'taskTypeStore'])
+            ->name('admin.master-data.task-types.store');
+        Route::put('/admin/master-data/task-types/{taskType}', [MasterDataController::class, 'taskTypeUpdate'])
+            ->whereNumber('taskType')->name('admin.master-data.task-types.update');
+        Route::delete('/admin/master-data/task-types/{taskType}', [MasterDataController::class, 'taskTypeDestroy'])
+            ->whereNumber('taskType')->name('admin.master-data.task-types.destroy');
+    });
+
     Route::middleware('permission:admin.permission.manage')->group(function () {
         Route::get('/admin/permissions', [AdminController::class, 'permissions'])->name('admin.permissions');
         Route::get('/admin/permissions/{role}', [AdminController::class, 'rolePermissions'])
@@ -450,7 +466,6 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class, \App\Ht
         Route::post('/rnd/projects/{project}/tasks', [RndController::class, 'taskStore'])->name('rnd.tasks.store');
         Route::post('/rnd/tasks/{task}/documents', [RndController::class, 'documentUpload'])->name('rnd.documents.upload');
         Route::post('/rnd/documents/{document}/audit', [RndController::class, 'documentAudit'])->name('rnd.documents.audit');
-        Route::post('/rnd/task-types', [RndController::class, 'taskTypeStore'])->name('rnd.task-types.store');
         Route::post('/rnd/tasks/{task}/extensions', [RndController::class, 'extensionStore'])->name('rnd.extensions.store');
 
         // P1-05：阶段推进（试产需基线）、设基线、简版 ECR/ECO

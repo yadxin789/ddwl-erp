@@ -106,7 +106,8 @@ class ProjectTemplateController extends Controller
         ]);
 
         $configs = $template->taskConfigs();
-        $taskTypes = RndTaskType::whereIn('id', collect($configs)->pluck('task_type_id')->filter()->unique()->all())
+        $taskTypes = RndTaskType::where('status', 1)
+            ->whereIn('id', collect($configs)->pluck('task_type_id')->filter()->unique()->all())
             ->get()
             ->keyBy('id');
 
@@ -149,6 +150,7 @@ class ProjectTemplateController extends Controller
     private function formData(): array
     {
         $taskTypes = RndTaskType::with('department')
+            ->where('status', 1)
             ->where('is_required', true)
             ->orderBy('sort_order')
             ->get();
