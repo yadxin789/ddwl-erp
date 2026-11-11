@@ -10,7 +10,9 @@ use App\Policies\MediaFilePolicy;
 use App\Policies\RndProjectDocumentPolicy;
 use App\Policies\RndProjectPolicy;
 use App\Policies\RndProjectTaskPolicy;
+use App\Services\OperationLogger;
 use App\Support\TenancyContext;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -37,5 +39,10 @@ class AppServiceProvider extends ServiceProvider
 
         // P0-07 / B-02：文件下载按业务归属授权
         Gate::policy(MediaFile::class, MediaFilePolicy::class);
+
+        // 普通 CRUD 个人追溯：捕获所有 Eloquent 新增/修改/删除写入。
+        Event::listen('eloquent.*', function (string $eventName, array $payload) {
+            app(OperationLogger::class)->handle($eventName, $payload[0] ?? null);
+        });
     }
 }

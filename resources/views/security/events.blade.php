@@ -12,6 +12,9 @@
             <li class="nav-item">
                 <a class="nav-link {{ $tab === 'events' ? 'active' : '' }}" href="{{ route('security.logs', ['tab' => 'events']) }}">安全事件</a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link {{ $tab === 'operations' ? 'active' : '' }}" href="{{ route('security.logs', ['tab' => 'operations']) }}">操作日志</a>
+            </li>
         </ul>
     </div>
     <div class="table-responsive">

@@ -6,6 +6,7 @@ use App\Models\Ai\AiProvider;
 use App\Models\Organization\Department;
 use App\Models\Organization\Position;
 use App\Models\Organization\User;
+use App\Services\OperationLogger;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
@@ -184,6 +185,7 @@ class AdminController extends Controller
         ];
 
         $requested = $data['permissions'] ?? [];
+        $beforePermissions = $role->permissions->pluck('name')->sort()->values()->all();
 
         if (in_array($role->name, ['role_sys_admin', 'system_admin'], true)) {
             $blocked = array_diff($requested, $systemWhitelist);
@@ -195,6 +197,21 @@ class AdminController extends Controller
         }
 
         $role->syncPermissions($requested);
+        $afterPermissions = $role->permissions()->pluck('name')->sort()->values()->all();
+
+        // 角色权限走 Laravel 权限包的中间表，Eloquent 模型事件覆盖不到，单独补一条流水。
+        if ($beforePermissions !== $afterPermissions) {
+            app(OperationLogger::class)->record(
+                'updated',
+                'roles',
+                (string) $role->id,
+                $role->name,
+                [
+                    'before' => ['permissions' => $beforePermissions],
+                    'after' => ['permissions' => $afterPermissions],
+                ]
+            );
+        }
 
         return redirect()->route('admin.permissions')->with('success', '角色权限已保存：' . $role->name);
     }

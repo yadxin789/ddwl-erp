@@ -8,6 +8,7 @@ use App\Models\System\Tenant;
 use App\Models\Organization\Department;
 use App\Models\Organization\Position;
 use App\Models\Organization\User;
+use App\Services\OperationLogger;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
@@ -46,6 +47,16 @@ class UserController extends Controller
         $user = User::create($validated);
         if (! empty($validated['roles'])) {
             $user->syncRoles($validated['roles']);
+            app(OperationLogger::class)->record(
+                'updated',
+                'users',
+                (string) $user->id,
+                $user->identity_label,
+                [
+                    'before' => ['roles' => []],
+                    'after' => ['roles' => $user->getRoleNames()->all()],
+                ]
+            );
         }
 
         return redirect()->route('users.index')->with('success', '用户创建成功。');
@@ -69,9 +80,25 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
+        $beforeRoles = $user->getRoleNames()->all();
         $user->update($validated);
         if (array_key_exists('roles', $validated)) {
             $user->syncRoles($validated['roles'] ?? []);
+            $afterRoles = $user->getRoleNames()->all();
+
+            // 角色绑定走权限包中间表，模型事件覆盖不到，单独补流水。
+            if ($beforeRoles !== $afterRoles) {
+                app(OperationLogger::class)->record(
+                    'updated',
+                    'users',
+                    (string) $user->id,
+                    $user->identity_label,
+                    [
+                        'before' => ['roles' => $beforeRoles],
+                        'after' => ['roles' => $afterRoles],
+                    ]
+                );
+            }
         }
 
         return redirect()->route('users.index')->with('success', '用户更新成功。');
