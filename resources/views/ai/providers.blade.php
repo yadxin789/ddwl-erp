@@ -17,6 +17,10 @@
             <div class="col-md-2"><input name="api_key" class="form-control form-control-sm" placeholder="API Key" required></div>
             <div class="col-md-2"><input name="model" class="form-control form-control-sm" placeholder="gpt-4o-mini" required></div>
             <div class="col-md-1"><button class="btn btn-sm btn-primary w-100">添加</button></div>
+            <div class="col-12 small text-muted">
+                Base URL 需包含版本路径：OpenAI 填 <code>https://api.openai.com/v1</code>，DeepSeek 填 <code>https://api.deepseek.com/v1</code>。
+                添加后默认启用；保存后点「测试」会真实请求一次 <code>/chat/completions</code>。
+            </div>
         </form>
     </div>
     <table class="table table-sm table-hover align-middle mb-0">
@@ -30,9 +34,14 @@
                 <td>{{ $p->model }}</td>
                 <td>@if($p->status)<span class="badge bg-success">启用</span>@else<span class="badge bg-secondary">停用</span>@endif</td>
                 <td>
-                    <form method="POST" action="{{ route('ai.providers.toggle', $p) }}">
-                        @csrf <button class="btn btn-sm btn-outline-warning py-0">{{ $p->status ? '停用' : '启用' }}</button>
-                    </form>
+                    <div class="d-flex gap-1">
+                        <form method="POST" action="{{ route('ai.providers.test', $p) }}">
+                            @csrf <button class="btn btn-sm btn-outline-primary py-0">测试</button>
+                        </form>
+                        <form method="POST" action="{{ route('ai.providers.toggle', $p) }}">
+                            @csrf <button class="btn btn-sm btn-outline-warning py-0">{{ $p->status ? '停用' : '启用' }}</button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             @empty

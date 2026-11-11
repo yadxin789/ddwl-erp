@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Ai\ToolRegistry;
 use App\Models\Ai\AiAttachment;
 use App\Models\Ai\AiConversation;
 use App\Models\Ai\AiMessage;
 use App\Models\Ai\AiProvider;
 use App\Models\Ai\AiSkill;
+use App\Services\AiService;
 use App\Services\BusinessQaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,8 +17,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AiChatController extends Controller
 {
-    public function __construct(private BusinessQaService $qa)
-    {
+    public function __construct(
+        private BusinessQaService $qa,
+        private AiService $ai,
+        private ToolRegistry $tools,
+    ) {
     }
 
     public function index(Request $request)
@@ -113,8 +118,43 @@ class AiChatController extends Controller
             $question .= "\n\n【本轮附件】" . implode('、', $fileNames);
         }
 
-        $result = $this->qa->answer($question, $request->user());
-        $answer = $result['answer'] ?? $this->fallback($content !== '' ? $content : implode('、', $fileNames));
+        $attachments = AiAttachment::where('message_id', $userMessage->id)->orderBy('id')->get();
+
+        if ($provider) {
+            $history = $conv->messages()
+                ->where('id', '<', $userMessage->id)
+                ->latest('id')
+                ->limit(12)
+                ->get()
+                ->reverse()
+                ->map(fn (AiMessage $m) => [
+                    'role' => $m->role,
+                    'content' => mb_substr((string) $m->content, 0, 4000),
+                ])
+                ->values()
+                ->all();
+
+            $names = (array) data_get($skill?->config, 'tools', []);
+            $selectedTools = $skill ? $this->tools->forNames($names, true) : $this->tools->all();
+
+            $aiResult = $this->ai->chatWithTools(
+                $request->user(),
+                $provider,
+                $question,
+                $history,
+                $selectedTools,
+                $this->skillInstructions($skill),
+                $attachments,
+            );
+
+            $answer = $aiResult['content'];
+            $meta['tools_used'] = $aiResult['tools'];
+            $meta['usage'] = $aiResult['usage'];
+            $meta['ai_error'] = $aiResult['error'];
+        } else {
+            $result = $this->qa->answer($question, $request->user());
+            $answer = $result['answer'] ?? $this->fallback($content !== '' ? $content : implode('、', $fileNames));
+        }
 
         AiMessage::create([
             'conversation_id' => $conv->id,
@@ -153,7 +193,8 @@ class AiChatController extends Controller
         $conv = AiConversation::create([
             'title' => '新会话',
             'user_id' => Auth::id(),
-            'provider_id' => $this->providerFromInput($data['provider_id'] ?? null)?->id,
+            'provider_id' => $this->providerFromInput($data['provider_id'] ?? null)?->id
+                ?? AiProvider::where('status', true)->value('id'),
             'skill_code' => $this->skillFromInput($data['skill_code'] ?? null)?->code,
             'conversation_type' => 'chat',
             'message_count' => 0,
@@ -347,8 +388,30 @@ class AiChatController extends Controller
     private function fallback(string $question): string
     {
         return "【业务问答暂未命中】已收到：" . $question . "\n"
-            . "当前可直接回答的业务问题示例：\n- " . implode("\n- ", $this->qa->examples())
-            . "\n其他开放问题需在 AI 服务商配置中接入 OpenAI/DeepSeek 后启用真实对话。";
+            . "可直接回答的业务问题示例：\n- " . implode("\n- ", $this->qa->examples())
+            . "\n如需开放式问答和工具调用，请在上方模型下拉中选择已启用的 AI 服务商。";
+    }
+
+    private function skillInstructions(?AiSkill $skill): ?string
+    {
+        if (! $skill) {
+            return null;
+        }
+
+        $names = (array) data_get($skill->config, 'tools', []);
+        $instructions = "当前选择的技能：{$skill->name}（类型 {$skill->type}）。\n{$skill->description}\n";
+        if ($names !== []) {
+            $instructions .= '该技能登记的工具：' . implode('、', $names) . "。\n";
+        }
+
+        if ($skill->type === 'doc-generator') {
+            $instructions .= "请优先使用知识库、项目、任务等查询结果，按用户要求生成结构完整的 Markdown 文档；未知数据标注【待补充】，不得编造。\n";
+        }
+        if ($skill->type === 'agent' || $skill->code === 'data-change') {
+            $instructions .= "当前系统只开放只读查询工具，没有变更提案工具。不得声称已修改任何业务数据；用户要求变更时，请说明应到哪个业务页面操作。\n";
+        }
+
+        return $instructions;
     }
 
     /* ---------- 服务商配置（管理员） ---------- */
@@ -376,7 +439,7 @@ class AiChatController extends Controller
         $provider->provider_code = $data['provider_code'];
         $provider->api_base = $data['api_base'];
         $provider->model = $data['model'];
-        $provider->status = $request->boolean('status');
+        $provider->status = $request->boolean('status', true);
         $provider->api_key = $data['api_key'];
         $provider->save();
 
@@ -394,6 +457,17 @@ class AiChatController extends Controller
         $provider->update(['status' => ! $provider->status]);
 
         return back()->with('success', $provider->status ? '已启用' : '已停用');
+    }
+
+    public function providerTest(AiProvider $provider)
+    {
+        $result = $this->ai->testConnection($provider);
+
+        if ($result['ok']) {
+            return back()->with('success', $result['message']);
+        }
+
+        return back()->withErrors(['provider_test' => $result['message']]);
     }
 
     /* ---------- OCR 发票识别（占位） ---------- */

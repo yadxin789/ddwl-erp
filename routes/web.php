@@ -558,6 +558,7 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group
         Route::get('/ai/providers', [AiChatController::class, 'providers'])->name('ai.providers');
         Route::post('/ai/providers', [AiChatController::class, 'providerStore'])->name('ai.providers.store');
         Route::post('/ai/providers/{provider}/toggle', [AiChatController::class, 'providerToggle'])->whereNumber('provider')->name('ai.providers.toggle');
+        Route::post('/ai/providers/{provider}/test', [AiChatController::class, 'providerTest'])->whereNumber('provider')->name('ai.providers.test');
     });
 
     // 质量检验

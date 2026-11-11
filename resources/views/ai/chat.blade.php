@@ -116,6 +116,7 @@
 
             <div class="ai-main-head">
                 <div class="flex-fill" style="min-width:180px;">
+                    @php($activeProviderId = $selected ? $selected->provider_id : ($providers->first()?->id))
                     <div class="fw-bold">
                         {{ $selected?->title ?: '新会话' }}
                         @if ($selected?->skill_code)
@@ -124,8 +125,8 @@
                         @endif
                     </div>
                     <div class="small text-muted">
-                        @if ($selected?->provider_id)
-                            @php($currentProvider = $providers->firstWhere('id', $selected->provider_id))
+                        @if ($activeProviderId)
+                            @php($currentProvider = $providers->firstWhere('id', $activeProviderId))
                             当前模型：{{ $currentProvider?->name ?? '已配置服务商' }} · {{ $currentProvider?->model ?? '' }}
                         @else
                             当前模型：内置业务问答（ERP 数据）
@@ -134,9 +135,9 @@
                 </div>
 
                 <select name="provider_id" form="aiSendForm" class="form-select form-select-sm" style="width:auto;max-width:240px;" title="选择本轮问答使用的模型">
-                    <option value="" {{ ! $selected?->provider_id ? 'selected' : '' }}>内置业务问答（ERP 数据）</option>
+                    <option value="" {{ ! $activeProviderId ? 'selected' : '' }}>内置业务问答（ERP 数据）</option>
                     @foreach ($providers as $provider)
-                        <option value="{{ $provider->id }}" {{ (int) $selected?->provider_id === (int) $provider->id ? 'selected' : '' }}>
+                        <option value="{{ $provider->id }}" {{ (int) $activeProviderId === (int) $provider->id ? 'selected' : '' }}>
                             {{ $provider->name }} · {{ $provider->model }}
                         </option>
                     @endforeach
@@ -197,6 +198,14 @@
                                 @if (! $isUser && ($message->meta['skill_name'] ?? null))
                                     <span class="badge bg-light text-muted border me-1">{{ $message->meta['skill_name'] }}</span>
                                 @endif
+                                @if (! $isUser && ! empty($message->meta['tools_used']))
+                                    <span class="badge bg-light text-muted border me-1">
+                                        <i class="fa fa-wrench"></i> 已调用 {{ count($message->meta['tools_used']) }} 个工具
+                                    </span>
+                                @endif
+                                @if (! $isUser && ! empty($message->meta['ai_error']))
+                                    <span class="badge bg-danger me-1">AI 异常</span>
+                                @endif
                                 {{ $message->created_at?->format('H:i') }}
                                 @if (! $isUser)
                                     <span class="copy-btn" title="复制"><i class="fa fa-copy"></i> 复制</span>
@@ -210,13 +219,21 @@
                 @empty
                     <div class="ai-empty">
                         <i class="fa fa-comments-o fa-3x mb-3 d-block"></i>
-                        <div>业务问答只读，答案来自当前 ERP 数据，受当前账号权限与数据范围约束。</div>
+                        <div>选择已启用的 AI 服务商后，会真实调用 DeepSeek / OpenAI 并执行受权限约束的查询工具；未选择服务商时使用内置业务问答。</div>
                         <div class="mt-3">
                             @foreach ($examples as $example)
                                 <span class="ai-suggest" data-suggest="{{ $example }}">{{ $example }}</span>
                             @endforeach
                         </div>
                         <div class="mt-3 small">支持上传图片与文本 / 表格文件；可选择「技能 / Agent」限定问答范围，也可使用下方提问技巧。</div>
+                        @if ($providers->isEmpty())
+                            <div class="mt-2 small text-warning">
+                                尚未配置 AI 服务商，当前只能使用内置业务问答。
+                                @if (auth()->user()?->can('ai.provider.manage'))
+                                    <a href="{{ route('ai.providers') }}">去添加 DeepSeek / OpenAI</a>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 @endforelse
             </div>
