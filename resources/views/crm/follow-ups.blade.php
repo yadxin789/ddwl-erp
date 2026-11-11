@@ -22,7 +22,7 @@
         <tbody>
             @forelse ($items as $f)
             <tr>
-                <td><span class="badge bg-info">{{ $f->type }}</span></td>
+                <td><span class="badge bg-info">{{ \App\Support\DisplayText::type($f->type) }}</span></td>
                 <td>{{ $f->content }}</td>
                 <td>{{ $f->user->identity_label ?? '-' }}</td>
                 <td class="small">{{ $f->followed_at?->format('Y-m-d H:i') }}</td>

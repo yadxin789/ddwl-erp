@@ -105,7 +105,7 @@
                             <td class="font-monospace">{{ $row->payload['order_no'] ?? ('#' . $row->ref_id) }}</td>
                             <td>
                                 @php($colors = ['pending'=>'secondary','failed'=>'warning text-dark','dead'=>'danger'])
-                                <span class="badge bg-{{ $colors[$row->status] ?? 'secondary' }}">{{ $row->status }}</span>
+                                <span class="badge bg-{{ $colors[$row->status] ?? 'secondary' }}">{{ \App\Support\DisplayText::status($row->status) }}</span>
                             </td>
                             <td class="text-end">{{ $row->retry_count }}/5</td>
                             <td class="small">{{ $row->next_retry_at?->format('m-d H:i') ?? '-' }}</td>

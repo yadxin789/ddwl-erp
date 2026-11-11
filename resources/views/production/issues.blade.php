@@ -13,7 +13,7 @@
                 <td class="font-monospace">{{ $i->issue_no }}</td>
                 <td>{{ $i->productionOrder->order_no ?? '-' }}</td>
                 <td>{{ $i->warehouse->warehouse_code ?? '-' }}</td>
-                <td><span class="badge bg-secondary text-dark">{{ $i->status }}</span></td>
+                <td><span class="badge bg-secondary text-dark">{{ \App\Support\DisplayText::status($i->status) }}</span></td>
                 <td>{{ $i->issue_date }}</td>
             </tr>
             @empty

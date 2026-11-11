@@ -17,7 +17,7 @@
                     <td class="small">{{ $position->department->dept_name ?? '-' }}</td>
                     <td class="small">
                         @foreach (($position->role_names ?? []) as $role)
-                            <span class="badge bg-primary-subtle text-primary-emphasis">{{ $role }}</span>
+                            <span class="badge bg-primary-subtle text-primary-emphasis">{{ \App\Support\DisplayText::role($role) }}</span>
                         @endforeach
                         @if (empty($position->role_names))
                             <span class="badge bg-danger">未绑定</span>
@@ -54,7 +54,7 @@
                                 <label class="form-label small mb-1">绑定角色（可多选）</label>
                                 <select name="role_names[]" class="form-select form-select-sm" multiple size="4" required>
                                     @foreach ($roles as $role)
-                                        <option value="{{ $role }}" @selected(in_array($role, $position->role_names ?? []))>{{ $role }}</option>
+                                        <option value="{{ $role }}" @selected(in_array($role, $position->role_names ?? []))>{{ \App\Support\DisplayText::role($role) }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -110,7 +110,7 @@
             <label class="form-label small mb-1">绑定角色（至少 1 个）</label>
             <select name="role_names[]" class="form-select form-select-sm" multiple size="4" required>
                 @foreach ($roles as $role)
-                    <option value="{{ $role }}">{{ $role }}</option>
+                    <option value="{{ $role }}">{{ \App\Support\DisplayText::role($role) }}</option>
                 @endforeach
             </select>
         </div>

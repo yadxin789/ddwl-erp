@@ -14,7 +14,7 @@
                 <tbody>
                     @forelse ($roles as $role)
                     <tr>
-                        <td><span class="badge bg-primary">{{ $role->name }}</span></td>
+                        <td><span class="badge bg-primary">{{ \App\Support\DisplayText::role($role->name) }}</span></td>
                         <td class="text-center">{{ $role->permissions_count }}</td>
                         <td class="text-center">{{ $role->users_count }}</td>
                         <td>
@@ -26,7 +26,7 @@
                     <tr class="collapse" id="perm-{{ $role->id }}">
                         <td colspan="4" class="bg-light">
                             @forelse ($role->permissions as $perm)
-                                <span class="badge bg-light text-dark border me-1 mb-1">{{ $perm->name }}</span>
+                                <span class="badge bg-light text-dark border me-1 mb-1">{{ \App\Support\DisplayText::permission($perm->name) }}</span>
                             @empty
                                 <span class="text-muted">无权限</span>
                             @endforelse

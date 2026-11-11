@@ -29,7 +29,7 @@
             <tr>
                 <td class="font-monospace small">{{ $row->reconcile_no }}</td>
                 <td class="small">{{ $row->period?->format('Y-m-d') }}</td>
-                <td class="small">{{ $row->type }}</td>
+                <td class="small">{{ \App\Support\DisplayText::type($row->type) }}</td>
                 <td class="text-end">¥{{ number_format((float) $row->book_amount, 2) }}</td>
                 <td class="text-end">¥{{ number_format((float) $row->actual_amount, 2) }}</td>
                 <td class="text-end {{ abs((float) $row->diff_amount) < 0.01 ? '' : 'text-danger' }}">¥{{ number_format((float) $row->diff_amount, 2) }}</td>

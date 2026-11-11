@@ -37,7 +37,7 @@
             <div class="col-md-3"><span class="text-muted">采购员：</span>{{ $order->buyer->identity_label ?? '-' }}</div>
             <div class="col-md-3"><span class="text-muted">订单日期：</span>{{ $order->order_date }}</div>
             <div class="col-md-3"><span class="text-muted">预计到货：</span>{{ $order->expected_date ?? '-' }}</div>
-            <div class="col-md-3"><span class="text-muted">状态：</span>{{ $order->status }}</div>
+            <div class="col-md-3"><span class="text-muted">状态：</span>{{ \App\Support\DisplayText::status($order->status) }}</div>
             <div class="col-md-3"><span class="text-muted">总金额：</span>{{ number_format($order->total_amount, 2) }}</div>
             <div class="col-md-6"><span class="text-muted">备注：</span>{{ $order->remark ?? '-' }}</div>
         </div>
@@ -73,7 +73,7 @@
                     <td>{{ $r->receipt_date }}</td>
                     <td>{{ $r->warehouse->name ?? '-' }}</td>
                     <td class="text-end">{{ rtrim(rtrim(number_format($r->total_qty,2),'0'),'.') }}</td>
-                    <td>{{ $r->status }}</td>
+                    <td>{{ \App\Support\DisplayText::status($r->status) }}</td>
                     <td><a href="{{ route('purchase.receipts.show', $r) }}" class="btn btn-sm btn-outline-primary">查看</a></td>
                 </tr>
                 @endforeach

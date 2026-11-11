@@ -120,7 +120,7 @@
         <thead class="table-light"><tr><th>级别</th><th>明细</th><th>时间</th></tr></thead>
         <tbody>
             @forelse ($alerts as $row)
-            <tr><td><span class="badge {{ $row['level'] === 'critical' ? 'bg-danger' : 'bg-warning text-dark' }}">{{ $row['level'] }}</span></td><td class="small font-monospace">{{ $row['detail'] }}</td><td class="small">{{ $row['created_at'] }}</td></tr>
+            <tr><td><span class="badge {{ $row['level'] === 'critical' ? 'bg-danger' : 'bg-warning text-dark' }}">{{ \App\Support\DisplayText::level($row['level']) }}</span></td><td class="small font-monospace">{{ $row['detail'] }}</td><td class="small">{{ $row['created_at'] }}</td></tr>
             @empty
             <tr><td colspan="3" class="text-center text-muted py-3">无告警</td></tr>
             @endforelse

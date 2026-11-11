@@ -27,7 +27,7 @@
                         {{ $project->start_date?->format('Y-m-d') ?? '-' }} ~ {{ $project->end_date?->format('Y-m-d') ?? '-' }}
                     </td>
                     <td class="text-end">{{ (int) $project->progress }}%</td>
-                    <td><span class="badge bg-secondary text-dark">{{ $project->status }}</span></td>
+                    <td><span class="badge bg-secondary text-dark">{{ \App\Support\DisplayText::status($project->status) }}</span></td>
                 </tr>
             @empty
                 <tr><td colspan="7" class="text-center text-muted py-5">暂无参与的项目</td></tr>

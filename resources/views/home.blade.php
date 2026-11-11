@@ -70,7 +70,7 @@
         @if(auth()->user()->position_label)
             · 岗位：{{ auth()->user()->position_label }}
         @endif
-        · 角色：@foreach(auth()->user()->getRoleNames() as $r)<span class="badge bg-primary">{{ $r }}</span> @endforeach
+        · 角色：@foreach(auth()->user()->getRoleNames() as $r)<span class="badge bg-primary">{{ \App\Support\DisplayText::role($r) }}</span> @endforeach
     </div>
 </div>
 @endsection

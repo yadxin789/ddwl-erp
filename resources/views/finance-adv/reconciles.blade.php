@@ -25,11 +25,11 @@
             @forelse ($rows as $r)
             <tr>
                 <td class="font-monospace">{{ $r->reconcile_no }}</td>
-                <td>{{ $r->period }}</td><td>{{ $r->type }}</td>
+                <td>{{ $r->period }}</td><td>{{ \App\Support\DisplayText::type($r->type) }}</td>
                 <td>¥{{ number_format($r->book_amount,2) }}</td>
                 <td>¥{{ number_format($r->actual_amount,2) }}</td>
                 <td class="{{ $r->diff_amount != 0 ? 'text-danger' : '' }}">¥{{ number_format($r->diff_amount,2) }}</td>
-                <td>{{ $r->status }}</td>
+                <td>{{ \App\Support\DisplayText::status($r->status) }}</td>
             </tr>
             @empty
             <tr><td colspan="7" class="text-center text-muted py-4">暂无对账单</td></tr>

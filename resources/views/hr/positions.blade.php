@@ -30,7 +30,7 @@
                 <td class="text-end">{{ $position->users_count }}</td>
                 <td class="small">
                     @forelse (($position->role_names ?? []) as $role)
-                        <span class="badge bg-primary-subtle text-primary-emphasis">{{ $role }}</span>
+                        <span class="badge bg-primary-subtle text-primary-emphasis">{{ \App\Support\DisplayText::role($role) }}</span>
                     @empty
                         <span class="badge bg-danger">未绑定</span>
                     @endforelse

@@ -28,7 +28,7 @@
                 <td>{{ $b->bill_date }}</td>
                 <td>¥{{ number_format($b->amount, 2) }}</td>
                 <td>¥{{ number_format($b->paid_amount, 2) }}</td>
-                <td><span class="badge bg-secondary text-dark">{{ $b->status }}</span></td>
+                <td><span class="badge bg-secondary text-dark">{{ \App\Support\DisplayText::status($b->status) }}</span></td>
             </tr>
             @empty
             <tr><td colspan="6" class="text-center text-muted py-4">暂无账单</td></tr>

@@ -54,7 +54,7 @@
     <table class="table table-sm mb-0"><thead class="table-light"><tr><th>状态</th><th class="text-end">数量</th><th class="text-end">金额</th></tr></thead>
         <tbody>
         @foreach ($ordersByStatus as $row)
-            <tr><td>{{ $row->status }}</td><td class="text-end">{{ $row->cnt }}</td><td class="text-end">¥{{ number_format((float) $row->amount, 2) }}</td></tr>
+            <tr><td>{{ \App\Support\DisplayText::status($row->status) }}</td><td class="text-end">{{ $row->cnt }}</td><td class="text-end">¥{{ number_format((float) $row->amount, 2) }}</td></tr>
         @endforeach
         </tbody>
     </table>

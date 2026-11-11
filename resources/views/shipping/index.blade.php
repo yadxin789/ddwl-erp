@@ -17,7 +17,7 @@
         <div>
             <span class="font-monospace fw-bold">{{ $order->order_no }}</span>
             <span class="text-muted ms-2">{{ $order->customer->customer_name ?? '-' }}</span>
-            <span class="badge bg-secondary text-dark ms-2">{{ $order->status }}</span>
+            <span class="badge bg-secondary text-dark ms-2">{{ \App\Support\DisplayText::status($order->status) }}</span>
         </div>
         <div class="text-muted small">交期：{{ $order->delivery_date?->format('Y-m-d') ?? '-' }}</div>
     </div>

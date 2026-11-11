@@ -23,7 +23,7 @@
         <thead class="table-light"><tr><th>编号</th><th>名称</th><th>阶段</th><th>AQL</th><th>启用</th></tr></thead>
         <tbody>
             @forelse ($templates as $t)
-            <tr><td class="font-monospace">{{ $t->code }}</td><td>{{ $t->name }}</td><td><span class="badge bg-info">{{ $t->stage }}</span></td><td>{{ $t->standard ?? '-' }}</td><td>{{ $t->status ? '✅' : '❌' }}</td></tr>
+            <tr><td class="font-monospace">{{ $t->code }}</td><td>{{ $t->name }}</td><td><span class="badge bg-info">{{ \App\Support\DisplayText::stage($t->stage) }}</span></td><td>{{ $t->standard ?? '-' }}</td><td>{{ $t->status ? '✅' : '❌' }}</td></tr>
             @empty
             <tr><td colspan="5" class="text-center text-muted py-4">暂无检验模板</td></tr>
             @endforelse

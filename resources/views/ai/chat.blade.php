@@ -147,7 +147,7 @@
                     <option value="">默认能力（全部技能）</option>
                     @foreach ($skills as $skill)
                         <option value="{{ $skill->code }}" {{ $selected?->skill_code === $skill->code ? 'selected' : '' }} title="{{ $skill->description }}">
-                            {{ $skill->name }}@if($skill->type === 'agent')（Agent）@endif
+                            {{ $skill->name }}@if($skill->type === 'agent')（智能体）@endif
                         </option>
                     @endforeach
                 </select>

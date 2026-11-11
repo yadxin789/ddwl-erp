@@ -33,7 +33,7 @@
                 <td class="small">{{ $note->drawer ?? '-' }}</td>
                 <td class="small">{{ $note->due_date?->format('Y-m-d') }}</td>
                 <td class="text-end">¥{{ number_format((float) $note->amount, 2) }}</td>
-                <td class="text-end"><span class="badge bg-secondary">{{ $note->status }}</span></td>
+                <td class="text-end"><span class="badge bg-secondary">{{ \App\Support\DisplayText::status($note->status) }}</span></td>
             </tr>
         @empty
             <tr><td colspan="6" class="text-center text-muted py-4">暂无票据</td></tr>

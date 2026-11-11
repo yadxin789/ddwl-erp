@@ -20,7 +20,7 @@
         <thead class="table-light"><tr><th>编码</th><th>名称</th><th>位置</th><th>日产能</th><th>状态</th></tr></thead>
         <tbody>
             @forelse ($centers as $c)
-            <tr><td class="font-monospace">{{ $c->code }}</td><td>{{ $c->name }}</td><td>{{ $c->location ?? '-' }}</td><td>{{ $c->capacity_per_day }}</td><td>{{ $c->status }}</td></tr>
+            <tr><td class="font-monospace">{{ $c->code }}</td><td>{{ $c->name }}</td><td>{{ $c->location ?? '-' }}</td><td>{{ $c->capacity_per_day }}</td><td>{{ \App\Support\DisplayText::status($c->status) }}</td></tr>
             @empty
             <tr><td colspan="5" class="text-center text-muted py-4">暂无工作中心</td></tr>
             @endforelse

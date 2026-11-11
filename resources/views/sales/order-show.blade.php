@@ -108,7 +108,7 @@
                     <div class="fw-semibold mb-2">出货记录</div>
                     @foreach ($order->shipments as $s)
                     <div class="border rounded p-2 mb-2 small">
-                        <div class="font-monospace">{{ $s->shipment_no }} <span class="badge bg-{{ $s->status === 'shipped' ? 'success' : 'secondary' }}">{{ $s->status }}</span></div>
+                        <div class="font-monospace">{{ $s->shipment_no }} <span class="badge bg-{{ $s->status === 'shipped' ? 'success' : 'secondary' }}">{{ \App\Support\DisplayText::status($s->status) }}</span></div>
                         <div class="text-muted">{{ $s->shipment_date }} 数量 {{ rtrim(rtrim(number_format($s->total_qty, 2), '0'), '.') }}</div>
                         @if ($s->logistics_company) <div>{{ $s->logistics_company }} / {{ $s->tracking_no }}</div> @endif
                     </div>

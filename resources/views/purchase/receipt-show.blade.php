@@ -14,7 +14,7 @@
             <div class="col-md-3"><span class="text-muted">供应商：</span>{{ $receipt->supplier->supplier_name ?? '-' }}</div>
             <div class="col-md-3"><span class="text-muted">收货日期：</span>{{ $receipt->receipt_date }}</div>
             <div class="col-md-3"><span class="text-muted">仓库：</span>{{ $receipt->warehouse->name ?? '-' }}</div>
-            <div class="col-md-3"><span class="text-muted">状态：</span>{{ $receipt->status }}</div>
+            <div class="col-md-3"><span class="text-muted">状态：</span>{{ \App\Support\DisplayText::status($receipt->status) }}</div>
         </div>
 
         @if ($receipt->status === 'pending_qc')

@@ -64,7 +64,7 @@
                     <label class="form-label">角色（可多选）</label>
                     <select name="roles[]" class="form-select" multiple size="5">
                         @foreach ($roles as $role)
-                            <option value="{{ $role->id }}" @selected($user->hasRole($role))>{{ $role->name }}</option>
+                            <option value="{{ $role->id }}" @selected($user->hasRole($role))>{{ \App\Support\DisplayText::role($role->name) }}</option>
                         @endforeach
                     </select>
                 </div>

@@ -27,7 +27,7 @@
         <thead class="table-light"><tr><th>单号</th><th>员工</th><th>类型</th><th>起止</th><th>天数</th><th>状态</th></tr></thead>
         <tbody>
             @forelse ($leaves as $l)
-            <tr><td class="font-monospace">{{ $l->leave_no }}</td><td>{{ $l->employee->name ?? '-' }}</td><td>{{ \App\Enums\HrLeaveType::tryFrom($l->type)?->label() ?? $l->type }}</td><td>{{ $l->from_date }} ~ {{ $l->to_date }}</td><td>{{ $l->days }}天</td><td><span class="badge bg-secondary text-dark">{{ $l->status }}</span></td></tr>
+            <tr><td class="font-monospace">{{ $l->leave_no }}</td><td>{{ $l->employee->name ?? '-' }}</td><td>{{ \App\Enums\HrLeaveType::tryFrom($l->type)?->label() ?? $l->type }}</td><td>{{ $l->from_date }} ~ {{ $l->to_date }}</td><td>{{ $l->days }}天</td><td><span class="badge bg-secondary text-dark">{{ \App\Support\DisplayText::status($l->status) }}</span></td></tr>
             @empty
             <tr><td colspan="6" class="text-center text-muted py-4">暂无请假</td></tr>
             @endforelse

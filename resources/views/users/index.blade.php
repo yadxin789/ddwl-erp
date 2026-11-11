@@ -33,7 +33,7 @@
                         <td class="small">{{ $user->department->dept_name ?? '-' }} / {{ $user->position->pos_name ?? '-' }}</td>
                         <td>
                             @foreach ($user->roles as $role)
-                                <span class="badge bg-primary">{{ $role->name }}</span>
+                                <span class="badge bg-primary">{{ \App\Support\DisplayText::role($role->name) }}</span>
                             @endforeach
                         </td>
                         <td>@if ($user->status === 1) <span class="badge bg-success">启用</span> @else <span class="badge bg-secondary">禁用</span> @endif</td>

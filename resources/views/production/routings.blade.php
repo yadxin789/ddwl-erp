@@ -22,7 +22,7 @@
         <thead class="table-light"><tr><th>路由编码</th><th>产品</th><th>版本</th><th>状态</th></tr></thead>
         <tbody>
             @forelse ($routings as $r)
-            <tr><td class="font-monospace">{{ $r->routing_code }}</td><td>{{ $r->product->material_code ?? '' }} {{ $r->product->name ?? '' }}</td><td>{{ $r->version }}</td><td>{{ $r->status }}</td></tr>
+            <tr><td class="font-monospace">{{ $r->routing_code }}</td><td>{{ $r->product->material_code ?? '' }} {{ $r->product->name ?? '' }}</td><td>{{ $r->version }}</td><td>{{ \App\Support\DisplayText::status($r->status) }}</td></tr>
             @empty
             <tr><td colspan="4" class="text-center text-muted py-4">暂无工艺路线</td></tr>
             @endforelse

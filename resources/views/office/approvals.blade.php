@@ -13,7 +13,7 @@
                 <td>{{ $ins->business_type }}</td>
                 <td class="font-monospace">#{{ $ins->business_id }}</td>
                 <td>第 {{ $ins->current_step }} 级</td>
-                <td><span class="badge bg-warning text-dark">{{ $ins->status }}</span></td>
+                <td><span class="badge bg-warning text-dark">{{ \App\Support\DisplayText::status($ins->status) }}</span></td>
                 <td>
                     <form method="POST" action="{{ route('approvals.decide', $ins) }}" class="d-flex gap-1">
                         @csrf

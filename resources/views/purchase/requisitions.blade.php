@@ -19,7 +19,7 @@
                 <td>{{ $r->title }}</td>
                 <td>{{ $r->requester->identity_label ?? '-' }}</td>
                 <td>{{ $r->need_date }}</td>
-                <td><span class="badge bg-secondary text-dark">{{ $r->status }}</span></td>
+                <td><span class="badge bg-secondary text-dark">{{ \App\Support\DisplayText::status($r->status) }}</span></td>
                 <td class="small">{{ $r->created_at?->format('Y-m-d') }}</td>
             </tr>
             @empty

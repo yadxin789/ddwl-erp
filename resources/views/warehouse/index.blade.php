@@ -9,7 +9,7 @@
         <div>
             <span class="font-monospace fw-bold">{{ $warehouse->warehouse_code }}</span>
             <span class="ms-2">{{ $warehouse->name }}</span>
-            <span class="badge bg-secondary text-dark ms-2">{{ $warehouse->type }}</span>
+            <span class="badge bg-secondary text-dark ms-2">{{ \App\Support\DisplayText::type($warehouse->type) }}</span>
             <span class="badge {{ $warehouse->status ? 'bg-success' : 'bg-secondary' }} ms-1">{{ $warehouse->status ? '启用' : '停用' }}</span>
         </div>
         <span class="text-muted small">库位 {{ $warehouse->locations->count() }} 个</span>

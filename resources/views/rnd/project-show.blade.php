@@ -90,7 +90,7 @@
                     <td>{{ $t->executor->identity_label ?? '-' }}</td>
                     <td>{{ $t->auditor->identity_label ?? '-' }}</td>
                     <td>{{ $t->end_date }}@if($t->is_overdue) <span class="badge bg-danger">逾期</span> @endif</td>
-                    <td>{{ $t->status }}</td>
+                    <td>{{ \App\Support\DisplayText::status($t->status) }}</td>
                     <td>
                         @can('upload', $t)
                         <form method="POST" action="{{ route('rnd.documents.upload', $t) }}" class="d-inline" enctype="multipart/form-data">
@@ -177,7 +177,7 @@
                 <label class="form-label small">受影响 BOM</label>
                 <select name="bom_id" id="ecr-bom" class="form-select form-select-sm" required>
                     @foreach ($boms as $b)
-                        <option value="{{ $b->id }}" @selected(old('bom_id') == $b->id)>{{ $b->bom_code }} {{ $b->version }} @if($b->status !== 'active')（{{ $b->status }}）@endif</option>
+                        <option value="{{ $b->id }}" @selected(old('bom_id') == $b->id)>{{ $b->bom_code }} {{ $b->version }} @if($b->status !== 'active')（{{ \App\Support\DisplayText::status($b->status) }}）@endif</option>
                     @endforeach
                 </select>
             </div>
@@ -236,12 +236,12 @@
                 <tr>
                     <td class="font-monospace">{{ $e->change_no }}@if($e->effective_date)<div class="small text-muted">生效 {{ $e->effective_date->format('Y-m-d') }}</div>@endif</td>
                     <td>{{ $e->title }}@if($e->scope_description)<div class="small text-muted">{{ $e->scope_description }}</div>@endif</td>
-                    <td>{{ $e->change_type }}<div class="small text-muted">{{ $e->priority ?? 'normal' }}</div></td>
+                    <td>{{ \App\Support\DisplayText::type($e->change_type) }}<div class="small text-muted">{{ \App\Support\DisplayText::priority($e->priority ?? 'normal') }}</div></td>
                     <td>{{ $e->bom->bom_code ?? '-' }} {{ $e->bom->version ?? '' }}</td>
                     <td class="small">
                         @php $ia = $e->impact_analysis ?? []; @endphp
                         @if (! empty($ia))
-                            <span class="badge bg-{{ ($ia['risk_level'] ?? 'low') === 'high' ? 'danger' : (($ia['risk_level'] ?? 'low') === 'medium' ? 'warning text-dark' : 'secondary text-dark') }}">{{ $ia['risk_level'] ?? 'low' }}</span>
+                            <span class="badge bg-{{ ($ia['risk_level'] ?? 'low') === 'high' ? 'danger' : (($ia['risk_level'] ?? 'low') === 'medium' ? 'warning text-dark' : 'secondary text-dark') }}">{{ \App\Support\DisplayText::level($ia['risk_level'] ?? 'low') }}</span>
                             工单 {{ $ia['open_work_orders']['count'] ?? 0 }} / 在库物料 {{ count($ia['materials'] ?? []) }} / 波及单 {{ $ia['affected_sales_orders']['count'] ?? 0 }}
                             <div class="text-muted">{{ implode('；', $ia['risk_flags'] ?? []) ?: '无风险提示' }}</div>
                         @else
@@ -249,7 +249,7 @@
                         @endif
                     </td>
                     <td>{{ $e->applicant->identity_label ?? '-' }}</td>
-                    <td><span class="badge bg-{{ $e->status === 'approved' ? 'success' : ($e->status === 'rejected' ? 'danger' : 'warning text-dark') }}">{{ $e->status }}</span></td>
+                    <td><span class="badge bg-{{ $e->status === 'approved' ? 'success' : ($e->status === 'rejected' ? 'danger' : 'warning text-dark') }}">{{ \App\Support\DisplayText::status($e->status) }}</span></td>
                     <td>
                         @if ($e->eco_no)
                             <div class="font-monospace small">{{ $e->eco_no }}</div>

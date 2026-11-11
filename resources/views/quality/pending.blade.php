@@ -44,7 +44,7 @@
                     <td>
                         @if ($b->receipt)
                             <a href="{{ route('purchase.receipts.show', $b->receipt) }}" class="font-monospace">{{ $b->receipt->receipt_no }}</a>
-                            <span class="badge bg-{{ $b->receipt->status === 'pending_qc' ? 'warning text-dark' : 'success' }}">{{ $b->receipt->status }}</span>
+                            <span class="badge bg-{{ $b->receipt->status === 'pending_qc' ? 'warning text-dark' : 'success' }}">{{ \App\Support\DisplayText::status($b->receipt->status) }}</span>
                         @else
                             <span class="text-muted">-</span>
                         @endif

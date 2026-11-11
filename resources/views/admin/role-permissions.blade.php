@@ -1,11 +1,11 @@
 @extends('layouts.admin')
 
-@section('title', '角色授权 · ' . $role->name)
+@section('title', '角色授权 · ' . \App\Support\DisplayText::role($role->name))
 
 @section('content')
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="font-monospace">{{ $role->name }}</span>
+        <span>{{ \App\Support\DisplayText::role($role->name) }}</span>
         <a href="{{ route('admin.permissions') }}" class="btn btn-sm btn-link">返回权限管理</a>
     </div>
     <form method="POST" action="{{ route('admin.permissions.role.update', $role) }}" class="card-body">
@@ -22,13 +22,13 @@
             @foreach ($permissionGroups as $module => $items)
                 <div class="col-md-4">
                     <div class="border rounded p-2 h-100">
-                        <div class="fw-bold small mb-1">{{ $module }}</div>
+                        <div class="fw-bold small mb-1">{{ \App\Support\DisplayText::module($module) }}</div>
                         @foreach ($items as $permission)
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="permissions[]"
                                        value="{{ $permission }}" id="p-{{ md5($permission) }}"
                                        @checked(in_array($permission, $rolePermissions))>
-                                <label class="form-check-label small" for="p-{{ md5($permission) }}">{{ $permission }}</label>
+                                <label class="form-check-label small" for="p-{{ md5($permission) }}">{{ \App\Support\DisplayText::permission($permission) }}</label>
                             </div>
                         @endforeach
                     </div>

@@ -17,7 +17,7 @@
     </div>
     <div class="card-body">
         <div class="row mb-3">
-            <div class="col-md-3"><span class="text-muted">状态：</span>{{ $order->status }}</div>
+            <div class="col-md-3"><span class="text-muted">状态：</span>{{ \App\Support\DisplayText::status($order->status) }}</div>
             <div class="col-md-3"><span class="text-muted">计划/完工/不良：</span>{{ rtrim(rtrim(number_format($order->plan_qty,2),'0'),'.') }} / {{ rtrim(rtrim(number_format($order->completed_qty,2),'0'),'.') }} / {{ rtrim(rtrim(number_format($order->defective_qty,2),'0'),'.') }}</div>
             <div class="col-md-3"><span class="text-muted">BOM：</span>{{ $order->bom->bom_code ?? '' }} v{{ $order->bom->version ?? '' }}</div>
         </div>

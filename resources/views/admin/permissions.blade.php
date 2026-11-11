@@ -12,7 +12,7 @@
                 <tbody>
                     @foreach ($roles as $role)
                         <tr>
-                            <td class="font-monospace small">{{ $role->name }}</td>
+                            <td class="small">{{ \App\Support\DisplayText::role($role->name) }}</td>
                             <td class="text-end">{{ $role->permissions_count }}</td>
                             <td class="text-end">
                                 <a href="{{ route('admin.permissions.role', $role) }}" class="btn btn-sm btn-outline-primary">授权</a>
@@ -36,7 +36,7 @@
                                 <td class="small">{{ $row['pos_name'] }}<div class="text-muted font-monospace">{{ $row['pos_code'] }}</div></td>
                                 <td class="small">
                                     @forelse ($row['bound'] as $role)
-                                        <span class="badge bg-primary-subtle text-primary-emphasis">{{ $role }}</span>
+                                        <span class="badge bg-primary-subtle text-primary-emphasis">{{ \App\Support\DisplayText::role($role) }}</span>
                                     @empty
                                         <span class="badge bg-danger">未绑定</span>
                                     @endforelse
@@ -52,7 +52,7 @@
             <div class="card-header">权限库（按模块）</div>
             <div class="card-body small" style="max-height:280px; overflow:auto;">
                 @foreach ($permissionGroups as $module => $items)
-                    <div class="mb-1"><span class="badge bg-secondary">{{ $module }}</span>
+                    <div class="mb-1"><span class="badge bg-secondary">{{ \App\Support\DisplayText::module($module) }}</span>
                         <span class="text-muted">{{ $items->count() }} 项</span>
                     </div>
                 @endforeach

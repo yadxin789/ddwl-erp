@@ -140,7 +140,7 @@
                 <td>{{ $o->routing?->routing_code ?? '-' }}</td>
                 <td>{{ $o->plan_qty }} / {{ $o->completed_qty }}</td>
                 <td>{{ $o->end_date ?? '-' }}</td>
-                <td>{{ $o->status }}</td>
+                <td>{{ \App\Support\DisplayText::status($o->status) }}</td>
             </tr>
         @empty
             <tr><td colspan="6" class="text-center text-muted py-4">没有待排程工单（未建工艺路线或已完工）</td></tr>

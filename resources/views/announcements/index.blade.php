@@ -36,7 +36,7 @@
             <div class="border-bottom p-3">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <span class="badge bg-secondary">{{ $item->category }}</span>
+                        <span class="badge bg-secondary">{{ \App\Support\DisplayText::type($item->category) }}</span>
                         <span class="fw-bold ms-1">{{ $item->title }}</span>
                     </div>
                     <div class="small text-muted">

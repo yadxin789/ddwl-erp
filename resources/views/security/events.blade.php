@@ -28,7 +28,7 @@
                     <td>{{ $ev->user->identity_label ?? '系统' }}</td>
                     <td>
                         @php $lv = ['low'=>'secondary','medium'=>'warning','high'=>'danger','critical'=>'danger'][$ev->level] ?? 'secondary'; @endphp
-                        <span class="badge bg-{{ $lv }}">{{ $ev->level }}</span>
+                        <span class="badge bg-{{ $lv }}">{{ \App\Support\DisplayText::level($ev->level) }}</span>
                     </td>
                     <td class="small">{{ $ev->detail }}</td>
                     <td class="font-monospace small">{{ $ev->ip_address }}</td>

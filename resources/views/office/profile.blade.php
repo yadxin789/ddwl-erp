@@ -52,7 +52,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">角色</label>
-                            <input class="form-control" value="{{ $user->roles->pluck('name')->implode('、') ?: '未分配' }}" disabled>
+                            <input class="form-control" value="{{ \App\Support\DisplayText::roles($user->roles->pluck('name')) }}" disabled>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">邮箱</label>

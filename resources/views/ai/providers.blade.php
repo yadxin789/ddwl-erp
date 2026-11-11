@@ -14,17 +14,17 @@
             <div class="col-md-2"><input name="name" class="form-control form-control-sm" placeholder="名称" required></div>
             <div class="col-md-2"><input name="provider_code" class="form-control form-control-sm" placeholder="如 openai/deepseek" required></div>
             <div class="col-md-3"><input name="api_base" class="form-control form-control-sm" placeholder="https://api.openai.com/v1" required></div>
-            <div class="col-md-2"><input name="api_key" class="form-control form-control-sm" placeholder="API Key" required></div>
+            <div class="col-md-2"><input name="api_key" class="form-control form-control-sm" placeholder="接口密钥" required></div>
             <div class="col-md-2"><input name="model" class="form-control form-control-sm" placeholder="gpt-4o-mini" required></div>
             <div class="col-md-1"><button class="btn btn-sm btn-primary w-100">添加</button></div>
             <div class="col-12 small text-muted">
-                Base URL 需包含版本路径：OpenAI 填 <code>https://api.openai.com/v1</code>，DeepSeek 填 <code>https://api.deepseek.com/v1</code>。
+                接口地址需包含版本路径：OpenAI 填 <code>https://api.openai.com/v1</code>，DeepSeek 填 <code>https://api.deepseek.com/v1</code>。
                 添加后默认启用；保存后点「测试」会真实请求一次 <code>/chat/completions</code>。
             </div>
         </form>
     </div>
     <table class="table table-sm table-hover align-middle mb-0">
-        <thead class="table-light"><tr><th>名称</th><th>代码</th><th>API Base</th><th>模型</th><th>状态</th><th>操作</th></tr></thead>
+        <thead class="table-light"><tr><th>名称</th><th>代码</th><th>接口地址</th><th>模型</th><th>状态</th><th>操作</th></tr></thead>
         <tbody>
             @forelse ($providers as $p)
             <tr>
