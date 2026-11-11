@@ -115,6 +115,53 @@ body {
     font-weight: 600;
 }
 
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+}
+
+.topbar-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .4rem .5rem;
+    border-radius: .5rem;
+    color: #475569;
+    text-decoration: none;
+    font-size: .88rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.topbar-icon:hover {
+    background: #f1f5f9;
+    color: #1d4ed8;
+}
+
+.topbar-icon i {
+    font-size: 1.05rem;
+}
+
+.topbar-badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #dc3545;
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.topbar-badge.is-zero {
+    background: #94a3b8;
+}
+
 .topbar .dropdown-toggle {
     text-decoration: none;
     color: #334155;

@@ -62,6 +62,11 @@ class AuthProfileTest extends TestCase
             ->assertSee('基本资料')
             ->assertSee('修改密码')
             ->assertSee('上传头像')
+            ->assertSee('AI助手')
+            ->assertSee('企业微信')
+            ->assertSee(route('office.notifications'))
+            ->assertSee('topbar-badge is-zero')
+            ->assertSee('>0</span>', false)
             ->assertDontSee('账号安全')
             ->assertDontSee('二次验证');
     }
