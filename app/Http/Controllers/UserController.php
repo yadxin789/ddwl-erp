@@ -103,4 +103,41 @@ class UserController extends Controller
 
         return redirect()->route('users.index')->with('success', '用户更新成功。');
     }
+
+    /**
+     * 注销账号：保留历史业务数据与操作流水，释放登录账号/邮箱，供本人重新注册。
+     * 不物理删除用户行，避免破坏既有单据的 user_id 追溯。
+     */
+    public function destroy(User $user)
+    {
+        if ($user->id === auth()->id()) {
+            return back()->withErrors(['user' => '不能注销当前登录账号。']);
+        }
+
+        $oldUsername = $user->username;
+        $oldEmail = $user->email;
+        $oldStatus = $user->status;
+        $oldRoles = $user->getRoleNames()->all();
+
+        $user->update([
+            'username' => 'zz_' . $user->id . '_' . now()->format('YmdHis'),
+            'email' => null,
+            'status' => 0,
+        ]);
+        $user->syncRoles([]);
+
+        app(OperationLogger::class)->record(
+            'deleted',
+            'users',
+            (string) $user->id,
+            $user->identity_label,
+            [
+                'before' => ['username' => $oldUsername, 'email' => $oldEmail, 'roles' => $oldRoles, 'status' => $oldStatus],
+                'after' => ['username' => $user->username, 'email' => null, 'roles' => [], 'status' => 0, 'note' => '账号注销，历史数据保留'],
+            ]
+        );
+
+        return redirect()->route('users.index')
+            ->with('success', "账号「{$oldUsername}」已注销，登录名已释放；本人可使用该登录名重新注册，待管理员启用。");
+    }
 }

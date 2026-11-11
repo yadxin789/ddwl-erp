@@ -9,10 +9,21 @@ use App\Models\Organization\User;
 use App\Services\FileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class OfficeController extends Controller
 {
+    /** 默认头像仓库（只允许这 5 个固定文件，避免路径穿越）。 */
+    private const DEFAULT_AVATARS = [
+        'defaults/avatar1.svg',
+        'defaults/avatar2.svg',
+        'defaults/avatar3.svg',
+        'defaults/avatar4.svg',
+        'defaults/avatar5.svg',
+    ];
+
     public function __construct(protected FileService $files)
     {
     }
@@ -26,6 +37,50 @@ class OfficeController extends Controller
     public function password()
     {
         return view('office.password');
+    }
+
+    public function avatar()
+    {
+        return view('office.avatar', ['user' => Auth::user()]);
+    }
+
+    /**
+     * 头像更新：上传图片或选择默认头像。
+     * 自定义头像落 public 磁盘 storage/app/public/avatars，默认头像只允许固定清单。
+     */
+    public function avatarUpdate(Request $request)
+    {
+        $user = Auth::user();
+
+        if ($request->filled('default_avatar')) {
+            $request->validate([
+                'default_avatar' => ['required', 'string', Rule::in(self::DEFAULT_AVATARS)],
+            ]);
+
+            if ($user->avatar && ! str_starts_with($user->avatar, 'defaults/')) {
+                Storage::disk('public')->delete('avatars/' . $user->avatar);
+            }
+
+            $user->update(['avatar' => $request->input('default_avatar')]);
+
+            return back()->with('success', '已切换为默认头像。');
+        }
+
+        $request->validate([
+            'avatar' => ['required', 'image', 'mimes:jpeg,jpg,png,gif', 'max:2048'],
+        ]);
+
+        $file = $request->file('avatar');
+        $fileName = now()->format('YmdHis') . '_' . Str::random(8) . '.' . strtolower($file->extension());
+        $file->storeAs('avatars', $fileName, 'public');
+
+        if ($user->avatar && ! str_starts_with($user->avatar, 'defaults/')) {
+            Storage::disk('public')->delete('avatars/' . $user->avatar);
+        }
+
+        $user->update(['avatar' => $fileName]);
+
+        return back()->with('success', '头像上传成功。');
     }
 
     /* ---------- 知识库 ---------- */
@@ -51,9 +106,8 @@ class OfficeController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:64'],
-            'phone' => ['nullable', 'string', 'max:32'],
-            'email' => ['nullable', 'email', 'max:128'],
-            'bio' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:128', Rule::unique('users', 'email')->ignore(Auth::id())],
+            'bio' => ['nullable', 'string', 'max:500'],
         ]);
         Auth::user()->update($data);
 

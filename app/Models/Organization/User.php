@@ -30,6 +30,7 @@ class User extends Authenticatable
         'position_id',
         'tenant_id',
         'avatar',
+        'bio',
         'wecom_userid',
         'wecom_bound_at',
         'status',
@@ -86,6 +87,22 @@ class User extends Authenticatable
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * 头像访问器：默认头像在 public/avatars/defaults，自定义头像在 public/storage/avatars。
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (! $this->avatar) {
+            return null;
+        }
+
+        if (str_starts_with($this->avatar, 'defaults/')) {
+            return asset('avatars/' . $this->avatar);
+        }
+
+        return asset('storage/avatars/' . $this->avatar);
     }
 
     public function position()

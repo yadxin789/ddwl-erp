@@ -42,6 +42,16 @@
                             @can('system.user.edit')
                             <a href="{{ route('users.edit', $user) }}" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-pen"></i></a>
                             @endcan
+                            @can('system.user.delete')
+                                @if ($user->id !== auth()->id())
+                                <form method="POST" action="{{ route('users.destroy', $user) }}" class="d-inline"
+                                      onsubmit="return confirm('确认注销账号「{{ $user->username }}」？\n注销后保留历史数据并释放登录名，本人可重新注册。');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-sm btn-outline-danger" title="注销账号"><i class="fa-solid fa-user-slash"></i></button>
+                                </form>
+                                @endif
+                            @endcan
                         </td>
                     </tr>
                     @empty

@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\MfaController;
 use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\ProjectTemplateController;
 use App\Http\Controllers\SupportController;
@@ -63,18 +62,13 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.submit');
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1')->name('register.submit');
 });
 
-Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class, \App\Http\Middleware\EnsureMfaVerified::class])->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::post('/password/update', [AuthController::class, 'updatePassword'])->name('password.update');
-
-    // P3-3 MFA/TOTP（中间件放行 mfa.*，避免验证前被自己拦住）
-    Route::get('/mfa/setup', [MfaController::class, 'setup'])->name('mfa.setup');
-    Route::post('/mfa/enable', [MfaController::class, 'enable'])->name('mfa.enable');
-    Route::get('/mfa/verify', [MfaController::class, 'verifyForm'])->name('mfa.verify');
-    Route::post('/mfa/verify', [MfaController::class, 'verify'])->name('mfa.verify.submit');
-    Route::post('/mfa/disable', [MfaController::class, 'disable'])->name('mfa.disable');
 
     // 工作台
     Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -525,6 +519,8 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class, \App\Ht
     // 协同办公（个人工作台，仅 auth）
     Route::get('/profile', [OfficeController::class, 'profile'])->name('office.profile');
     Route::post('/profile', [OfficeController::class, 'profileUpdate'])->name('office.profile.update');
+    Route::get('/profile/avatar', [OfficeController::class, 'avatar'])->name('office.avatar');
+    Route::post('/profile/avatar', [OfficeController::class, 'avatarUpdate'])->name('office.avatar.update');
     Route::get('/notifications', [OfficeController::class, 'notifications'])->name('office.notifications');
     Route::get('/todos', [OfficeController::class, 'todos'])->name('office.todos');
     Route::post('/todos/{todo}/finish', [OfficeController::class, 'todoFinish'])->name('office.todos.finish');
@@ -754,6 +750,9 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class, \App\Ht
     Route::middleware('permission:system.user.edit')->group(function () {
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    });
+    Route::middleware('permission:system.user.delete')->group(function () {
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     });
     Route::middleware('permission:system.role.view')->group(function () {
         Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');

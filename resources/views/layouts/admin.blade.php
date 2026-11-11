@@ -30,31 +30,53 @@
                 </button>
                 <span class="page-title">@yield('title', '工作台')</span>
             </div>
-            <div class="dropdown">
+            <div class="dropdown user-info">
+                @php($currentUser = auth()->user())
                 <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">
-                    <span class="avatar">{{ mb_substr(auth()->user()->name, 0, 1) }}</span>
-                    <span class="d-none d-md-inline">{{ auth()->user()->name }}</span>
+                    <span class="avatar">
+                        @if ($currentUser->avatar_url)
+                            <img src="{{ $currentUser->avatar_url }}" alt="头像">
+                        @else
+                            {{ mb_substr($currentUser->name, 0, 1) }}
+                        @endif
+                    </span>
+                    <span class="d-none d-md-inline">{{ $currentUser->identity_label }}</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li>
-                        <span class="dropdown-item-text small text-muted">
-                            {{ auth()->user()->identity_label }}
-                            @if(auth()->user()->position_label)
-                                · {{ auth()->user()->position_label }}
-                            @endif
-                        </span>
+                        <div class="dropdown-user-head">
+                            <span class="avatar avatar-lg">
+                                @if ($currentUser->avatar_url)
+                                    <img src="{{ $currentUser->avatar_url }}" alt="头像">
+                                @else
+                                    {{ mb_substr($currentUser->name, 0, 1) }}
+                                @endif
+                            </span>
+                            <span class="user-meta">
+                                <span class="d-block fw-semibold">{{ $currentUser->identity_label }}</span>
+                                <span class="d-block small text-muted">
+                                    {{ $currentUser->position_label ?: ($currentUser->department->dept_name ?? '未分配岗位') }}
+                                </span>
+                            </span>
+                        </div>
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <a class="dropdown-item" href="{{ route('mfa.setup') }}">
-                            <i class="fa-solid fa-shield-halved me-2"></i>账号安全 / 二次验证
+                        <a class="dropdown-item" href="{{ route('office.profile') }}">
+                            <i class="fa-solid fa-id-card me-2"></i>基本资料
                         </a>
                     </li>
                     <li>
-                        <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#changePwdModal">
+                        <a class="dropdown-item" href="{{ route('office.password') }}">
                             <i class="fa-solid fa-key me-2"></i>修改密码
-                        </button>
+                        </a>
                     </li>
+                    <li>
+                        <a class="dropdown-item" href="{{ route('office.avatar') }}">
+                            <i class="fa-solid fa-image me-2"></i>上传头像
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
                     <li>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
@@ -86,37 +108,6 @@
             @endif
             @yield('content')
         </main>
-    </div>
-</div>
-
-<!-- 修改密码 Modal -->
-<div class="modal fade" id="changePwdModal" tabindex="-1">
-    <div class="modal-dialog">
-        <form class="modal-content" method="POST" action="{{ route('password.update') }}">
-            @csrf
-            <div class="modal-header">
-                <h5 class="modal-title">修改密码</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">当前密码</label>
-                    <input type="password" name="current_password" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">新密码（至少6位）</label>
-                    <input type="password" name="password" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">确认新密码</label>
-                    <input type="password" name="password_confirmation" class="form-control" required>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="submit" class="btn btn-primary">保存</button>
-            </div>
-        </form>
     </div>
 </div>
 

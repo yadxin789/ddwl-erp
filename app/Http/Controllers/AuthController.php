@@ -24,6 +24,44 @@ class AuthController extends Controller
     }
 
     /**
+     * 注册申请页：自助注册后默认禁用，需管理员分配岗位/角色并启用。
+     */
+    public function showRegister()
+    {
+        return view('auth.register');
+    }
+
+    /**
+     * 注册申请：只创建待审核账号，不允许自助选择角色。
+     * 忘记密码的账号必须先由管理员注销旧账号释放登录名，再走这里重新注册。
+     */
+    public function register(Request $request)
+    {
+        $data = $request->validate([
+            'username' => ['required', 'string', 'max:32', 'unique:users,username'],
+            'name' => ['required', 'string', 'max:64'],
+            'email' => ['nullable', 'email', 'max:128', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
+        ], [
+            'username.unique' => '该登录账号已存在；如忘记密码，请联系管理员注销旧账号后再注册。',
+            'email.unique' => '该邮箱已被使用。',
+            'password.min' => '密码长度不能少于6位。',
+            'password.confirmed' => '两次输入的密码不一致。',
+        ]);
+
+        $user = User::create([
+            'username' => $data['username'],
+            'name' => $data['name'],
+            'email' => $data['email'] ?? null,
+            'password' => $data['password'],
+            'status' => 0,
+        ]);
+
+        return redirect()->route('login')
+            ->with('success', "注册申请已提交（{$user->name}）。请联系系统管理员分配部门、岗位和角色并启用账号后登录。");
+    }
+
+    /**
      * 登录处理：账号（username/email）+ 密码，禁用账号禁止登录
      */
     public function login(LoginRequest $request)
@@ -46,7 +84,7 @@ class AuthController extends Controller
             ->orWhere('email', $credentials['account'])
             ->first();
 
-        if (! $user || $user->status !== 1 || ! Hash::check($credentials['password'], $user->password)) {
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             // 累计失败次数
             $failure = LoginFailure::updateOrCreate(
                 ['username' => $credentials['account'], 'ip_address' => $ip],
@@ -70,14 +108,24 @@ class AuthController extends Controller
                 'created_at' => now(),
             ]);
             throw ValidationException::withMessages([
-                'account' => '账号或密码错误，或账号已被禁用。',
+                'account' => '账号或密码错误。',
+            ]);
+        }
+
+        if ($user->status !== 1) {
+            LoginLog::create([
+                'user_id' => $user->id,
+                'username' => $credentials['account'],
+                'ip_address' => $ip, 'user_agent' => $ua,
+                'status' => 'failed', 'fail_reason' => '账号未启用',
+                'created_at' => now(),
+            ]);
+            throw ValidationException::withMessages([
+                'account' => '账号尚未启用，请联系系统管理员审核启用后再登录。',
             ]);
         }
 
         Auth::login($user, $request->boolean('remember'));
-
-        // P3-3：每次登录都重新过二次验证，避免旧会话标记沿用
-        $request->session()->forget(['mfa_verified_at', 'mfa_user_id', 'mfa_setup_secret']);
 
         // 登录成功：清除失败计数
         LoginFailure::where('username', $credentials['account'])->where('ip_address', $ip)->delete();

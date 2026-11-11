@@ -50,6 +50,12 @@
             </div>
         @endif
 
+        @if (session('success'))
+            <div class="alert alert-success py-2">
+                {{ session('success') }}
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('login') }}">
             @csrf
             <div class="mb-3">
@@ -82,6 +88,11 @@
             <div>采购专员：赵六</div>
             <div>销售专员：钱七</div>
             <div class="text-muted mt-1">其余岗位账号见《用户管理》列表。</div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3 small">
+            <span class="text-muted">忘记密码：请联系管理员注销旧账号后重新注册</span>
+            <a href="{{ route('register') }}" class="fw-semibold text-decoration-none">注册账号</a>
         </div>
     </div>
 </div>
