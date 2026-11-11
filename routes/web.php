@@ -539,6 +539,19 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group
     Route::middleware('permission:ai.view')->group(function () {
         Route::get('/ai/chat', [AiChatController::class, 'index'])->name('ai.chat');
         Route::post('/ai/chat/send', [AiChatController::class, 'send'])->name('ai.chat.send');
+        Route::post('/ai/conversations', [AiChatController::class, 'storeConversation'])->name('ai.conversations.store');
+        Route::patch('/ai/conversations/{conversation}', [AiChatController::class, 'updateConversation'])
+            ->whereNumber('conversation')->name('ai.conversations.update');
+        Route::delete('/ai/conversations/{conversation}', [AiChatController::class, 'destroyConversation'])
+            ->whereNumber('conversation')->name('ai.conversations.destroy');
+        Route::post('/ai/conversations/{conversation}/clear', [AiChatController::class, 'clearConversation'])
+            ->whereNumber('conversation')->name('ai.conversations.clear');
+        Route::get('/ai/conversations/{conversation}/export', [AiChatController::class, 'exportConversation'])
+            ->whereNumber('conversation')->name('ai.conversations.export');
+        Route::get('/ai/attachments/{attachment}/preview', [AiChatController::class, 'previewAttachment'])
+            ->whereNumber('attachment')->name('ai.attachments.preview');
+        Route::get('/ai/attachments/{attachment}/download', [AiChatController::class, 'downloadAttachment'])
+            ->whereNumber('attachment')->name('ai.attachments.download');
         Route::get('/ai/ocr', [AiChatController::class, 'ocr'])->name('ai.ocr');
     });
     Route::middleware('permission:ai.provider.manage')->group(function () {
