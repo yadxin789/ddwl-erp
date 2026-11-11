@@ -37,9 +37,9 @@ class RndController extends Controller
      */
     public function projectCreate()
     {
+        // 任务类型字典中该部门的所有启用项都应可选：必选项默认勾选，可选项按需勾选
         $taskTypes = RndTaskType::with('department')
             ->where('status', 1)
-            ->where('is_required', true)
             ->orderBy('sort_order')
             ->get();
 

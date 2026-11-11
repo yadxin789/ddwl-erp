@@ -112,7 +112,7 @@
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span class="fw-semibold">任务配置</span>
-            <small class="text-muted">同一任务类型有多张图纸时，点该行“+”新增任务</small>
+            <small class="text-muted">已列出该部门全部启用任务类型；“必选”默认勾选，“可选”按项目需要勾选；同一类型多张图纸点“+”</small>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -132,9 +132,14 @@
                     </thead>
                     <tbody id="taskBody">
                     @foreach($taskTypes as $index => $type)
-                        <tr class="task-row task-row-base" data-dept-id="{{ $type->department_id }}" data-task-type-id="{{ $type->id }}" data-task-type-name="{{ $type->name }}">
+                        <tr class="task-row task-row-base {{ $type->is_required ? '' : 'table-secondary' }}" data-dept-id="{{ $type->department_id }}" data-task-type-id="{{ $type->id }}" data-task-type-name="{{ $type->name }}" data-required="{{ $type->is_required ? 1 : 0 }}">
                             <td>
                                 {{ $type->name }}
+                                @if ($type->is_required)
+                                    <span class="badge bg-danger-subtle text-danger ms-1">必选</span>
+                                @else
+                                    <span class="badge bg-secondary-subtle text-secondary ms-1">可选</span>
+                                @endif
                                 <input type="hidden" name="tasks[{{ $index }}][task_type_id]" value="{{ $type->id }}">
                             </td>
                             <td>
@@ -143,7 +148,7 @@
                             </td>
                             <td class="text-center">
                                 <input type="checkbox" class="form-check-input task-enabled"
-                                       name="tasks[{{ $index }}][enabled]" value="1" checked
+                                       name="tasks[{{ $index }}][enabled]" value="1" @checked($type->is_required)
                                        onchange="onTaskEnabledChange(this)">
                             </td>
                             <td>

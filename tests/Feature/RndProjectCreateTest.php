@@ -91,6 +91,65 @@ class RndProjectCreateTest extends TestCase
         $this->assertNotContains((int) User::where('username', '孙八')->firstOrFail()->id, $auditorIds);
     }
 
+    public function test_create_page_lists_all_enabled_task_types_including_optional(): void
+    {
+        $this->actingAs($this->manager);
+
+        $response = $this->get(route('rnd.projects.create'))->assertOk();
+
+        $allEnabled = RndTaskType::where('status', 1)->count();
+        $this->assertCount($allEnabled, $response->viewData('taskTypes'));
+
+        $optional = RndTaskType::where('status', 1)->where('is_required', false)->firstOrFail();
+        $response->assertSee($optional->name)->assertSee('可选');
+
+        $this->get(route('project.templates.create'))
+            ->assertOk()
+            ->assertSee($optional->name)
+            ->assertSee('可选');
+    }
+
+    public function test_optional_task_type_can_be_enabled_in_new_project(): void
+    {
+        $this->actingAs($this->manager);
+
+        $type = RndTaskType::where('status', 1)
+            ->where('is_required', false)
+            ->whereNotNull('department_id')
+            ->orderBy('sort_order')
+            ->firstOrFail();
+        $deptId = (int) $type->department_id;
+        $auditor = $this->auditorFor($deptId);
+        $executor = User::where('department_id', $deptId)
+            ->where('status', 1)
+            ->where('id', '!=', $auditor->id)
+            ->orderBy('id')
+            ->firstOrFail();
+
+        $response = $this->post(route('rnd.projects.store'), [
+            'project_name' => '可选任务类型项目',
+            'start_date' => now()->toDateString(),
+            'selected_depts' => [$deptId],
+            'dept_days' => [$deptId => 5],
+            'tasks' => [[
+                'task_type_id' => $type->id,
+                'name' => $type->name,
+                'department_id' => $deptId,
+                'enabled' => '1',
+                'executor_id' => $executor->id,
+                'auditor_id' => $auditor->id,
+            ]],
+        ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $project = RndProject::where('project_name', '可选任务类型项目')->firstOrFail();
+        $this->assertDatabaseHas('rnd_project_tasks', [
+            'project_id' => $project->id,
+            'task_type_id' => $type->id,
+        ]);
+    }
+
     public function test_create_page_renders_with_reference_sections(): void
     {
         $this->actingAs($this->manager);

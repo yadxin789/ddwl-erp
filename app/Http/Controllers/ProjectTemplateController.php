@@ -162,9 +162,9 @@ class ProjectTemplateController extends Controller
     /** 创建/详情页共用的任务类型、部门、人员数据 */
     private function formData(): array
     {
+        // 任务类型字典中该部门的所有启用项都应可选：必选项默认勾选，可选项按需勾选
         $taskTypes = RndTaskType::with('department')
             ->where('status', 1)
-            ->where('is_required', true)
             ->orderBy('sort_order')
             ->get();
 
