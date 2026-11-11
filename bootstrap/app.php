@@ -40,7 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return response()->view('errors.403', [
-                'currentUser' => $request->user()?->name,
+                'currentUser' => $request->user()?->identity_label,
                 'positionName' => $position['position_name'] ?? '未绑定岗位',
                 'requiredPermission' => $requiredPermission,
             ], 403);

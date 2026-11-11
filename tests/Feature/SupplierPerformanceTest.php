@@ -18,7 +18,7 @@ class SupplierPerformanceTest extends TestCase
 
     public function test_score_combines_on_time_and_quality_rates_and_is_idempotent(): void
     {
-        $buyer = User::where('username', 'purchase')->firstOrFail();
+        $buyer = User::where('username', '赵六')->firstOrFail();
         $supplierA = Supplier::create(['supplier_code' => 'QA-SUP-A', 'supplier_name' => '绩效供应商A', 'status' => 1, 'owner_id' => $buyer->id]);
         $supplierB = Supplier::create(['supplier_code' => 'QA-SUP-B', 'supplier_name' => '绩效供应商B', 'status' => 1, 'owner_id' => $buyer->id]);
 
@@ -70,7 +70,7 @@ class SupplierPerformanceTest extends TestCase
 
     public function test_supplier_report_page_generates_and_lists_scores(): void
     {
-        $manager = User::where('username', 'pur-manager')->firstOrFail();
+        $manager = User::where('username', '徐涛')->firstOrFail();
         $this->actingAs($manager)
             ->post(route('report.supplier.score'), ['start' => '2026-11-01', 'end' => '2026-11-30'])
             ->assertRedirect();

@@ -27,7 +27,7 @@ class MfaTest extends TestCase
     public function test_enable_challenge_recovery_and_disable(): void
     {
         $totp = app(TotpService::class);
-        $user = User::where('username', 'wh-keeper')->firstOrFail();
+        $user = User::where('username', '王五')->firstOrFail();
         $this->actingAs($user);
 
         $response = $this->get(route('mfa.setup'));

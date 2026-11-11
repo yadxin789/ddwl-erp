@@ -187,7 +187,7 @@ class DemoDataSeeder extends Seeder
                     'material_id' => $material->id,
                     'is_primary' => $mpn['is_primary'],
                     'is_alternative' => 0,
-                    'approved_by' => 'admin',
+                    'approved_by' => '张三',
                     'approved_at' => now(),
                 ]
             );
@@ -205,7 +205,7 @@ class DemoDataSeeder extends Seeder
             ['customer_code' => 'C0003', 'customer_name' => '广州明远贸易有限公司', 'contact_person' => '王总', 'contact_phone' => '13800000003', 'payment_terms' => '现款现货', 'credit_limit' => 100000],
         ];
 
-        $sales = User::where('username', 'sales')->first();
+        $sales = User::where('username', '钱七')->first();
 
         foreach ($customers as $customer) {
             Customer::updateOrCreate(
@@ -231,7 +231,7 @@ class DemoDataSeeder extends Seeder
             ['supplier_code' => 'S0004', 'supplier_name' => '深圳华强PCB板厂', 'contact_person' => '周工', 'contact_phone' => '13900000004', 'supplier_type' => '加工', 'lead_time_days' => 5],
         ];
 
-        $purchase = User::where('username', 'purchase')->first();
+        $purchase = User::where('username', '赵六')->first();
 
         foreach ($suppliers as $supplier) {
             Supplier::updateOrCreate(
@@ -250,7 +250,7 @@ class DemoDataSeeder extends Seeder
      */
     private function seedInitialStock(): void
     {
-        $admin = User::where('username', 'admin')->first();
+        $admin = User::where('username', '张三')->first();
         $warehouse = Warehouse::where('warehouse_code', 'WH-RM')->first();
         if (! $warehouse) {
             return;

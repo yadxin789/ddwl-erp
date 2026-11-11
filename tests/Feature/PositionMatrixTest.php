@@ -17,17 +17,17 @@ class PositionMatrixTest extends TestCase
 {
     /** 覆盖 29 个岗位（全部有演示账号） */
     private array $accounts = [
-        'admin',
-        'wh-supervisor', 'wh-keeper', 'wh-receiver',
-        'purchase', 'pur-manager',
-        'sales', 'sal-manager', 'sal-cs',
-        'engineer', 'eng-sw', 'eng-me', 'pkg-designer', 'id-designer', 'rnd-manager',
-        'quality', 'iqc-inspector', 'ipqc-inspector', 'fqc-inspector',
-        'prod-supervisor', 'prod-leader', 'operator',
-        'admin-assistant', 'adm-manager',
-        'accountant', 'cashier',
-        'ecom-operator', 'ecom-cs',
-        'gm',
+        '张三',
+        '李四', '王五', '卢伟',
+        '赵六', '徐涛',
+        '钱七', '罗娟', '彭欣',
+        '孙八', '唐斌', '韩磊', '谢婷', '许凯', '王明',
+        '周九', '郑一', '邓雪', '曹颖',
+        '吴十', '冯军', '蒋鹏',
+        '李娜', '苏琴',
+        '陈静', '刘芳',
+        '魏晨', '叶萌',
+        '高远',
     ];
 
     /** 探针页面：任何岗位只应有其中一部分（用真实路由名） */
@@ -105,6 +105,6 @@ class PositionMatrixTest extends TestCase
 
         // 至少覆盖到 11 个有菜单的岗位；管理员被拒的业务页不少于 3 个
         $this->assertGreaterThanOrEqual(11, count($matrix));
-        $this->assertGreaterThanOrEqual(3, $matrix['admin']['denied']);
+        $this->assertGreaterThanOrEqual(3, $matrix['张三']['denied']);
     }
 }

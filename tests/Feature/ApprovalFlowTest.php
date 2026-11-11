@@ -70,15 +70,15 @@ class ApprovalFlowTest extends TestCase
 
         // D-21：采购主管主审 + 总经理代批
         $poFlow = ApprovalFlow::where('business_type', 'purchase_order.confirm')->first();
-        $this->assertSame($this->demoId('pur-manager'), (int) $poFlow->steps_json[0]['approver_id']);
-        $this->assertContains($this->demoId('gm'), array_map('intval', $poFlow->steps_json[0]['delegate_ids']));
+        $this->assertSame($this->demoId('徐涛'), (int) $poFlow->steps_json[0]['approver_id']);
+        $this->assertContains($this->demoId('高远'), array_map('intval', $poFlow->steps_json[0]['delegate_ids']));
 
         // 付款/发票两级：会计 → 总经理
         foreach (['payment.execute', 'invoice.issue'] as $t) {
             $steps = ApprovalFlow::where('business_type', $t)->first()->steps_json;
             $this->assertCount(2, $steps);
-            $this->assertSame($this->demoId('accountant'), (int) $steps[0]['approver_id']);
-            $this->assertSame($this->demoId('gm'), (int) $steps[1]['approver_id']);
+            $this->assertSame($this->demoId('陈静'), (int) $steps[0]['approver_id']);
+            $this->assertSame($this->demoId('高远'), (int) $steps[1]['approver_id']);
         }
     }
 
@@ -109,7 +109,7 @@ class ApprovalFlowTest extends TestCase
         DB::beginTransaction();
         try {
             // 确认权属主管（P0-02），所以由主管提交；主管提交即"申请人"，不能自己批（D-21 由总经理代批）
-            $manager = $this->actingAsDemo('pur-manager');
+            $manager = $this->actingAsDemo('徐涛');
             $poId = $this->makePo($manager->id);
 
             $this->post("/purchase/orders/{$poId}/confirm")->assertRedirect();
@@ -129,7 +129,7 @@ class ApprovalFlowTest extends TestCase
             }
 
             // 无关岗位 → 越权
-            $this->actingAsDemo('wh-keeper');
+            $this->actingAsDemo('王五');
             try {
                 app(ApprovalService::class)->decide($instance->id, true, '越权');
                 $this->fail('非本步骤审批人应当被拒绝');
@@ -138,7 +138,7 @@ class ApprovalFlowTest extends TestCase
             }
 
             // 总经理代批 → 订单 confirmed，实例 approved，写审计流水
-            $this->actingAsDemo('gm');
+            $this->actingAsDemo('高远');
             app(ApprovalService::class)->decide($instance->id, true, '主管出差，总经理代批');
             $this->assertSame('confirmed', PurchaseOrder::withoutGlobalScopes()->find($poId)->status);
             $this->assertSame('approved', $instance->fresh()->status);
@@ -156,7 +156,7 @@ class ApprovalFlowTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $manager = $this->actingAsDemo('pur-manager');
+            $manager = $this->actingAsDemo('徐涛');
             $poId = $this->makePo($manager->id);
             $this->post("/purchase/orders/{$poId}/confirm")->assertRedirect();
 
@@ -165,7 +165,7 @@ class ApprovalFlowTest extends TestCase
             $svc = app(ApprovalService::class);
 
             // 代批不写理由 → 失败
-            $this->actingAsDemo('gm');
+            $this->actingAsDemo('高远');
             try {
                 $svc->decide($instance->id, true, '');
                 $this->fail('代批缺理由应当被拒绝');
@@ -192,7 +192,7 @@ class ApprovalFlowTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $manager = $this->actingAsDemo('pur-manager');
+            $manager = $this->actingAsDemo('徐涛');
             $poId = $this->makePo($manager->id);
             $this->post("/purchase/orders/{$poId}/confirm")->assertRedirect();
             $instanceId = ApprovalInstance::where('business_id', $poId)->value('id');
@@ -201,8 +201,8 @@ class ApprovalFlowTest extends TestCase
             // 申请人（主管）自己看不到自己的单
             $this->assertFalse($svc->canDecide(ApprovalInstance::find($instanceId), $manager->id));
             // 无关岗位（仓管）看不到；代批人（总经理）能看到
-            $this->assertFalse($svc->canDecide(ApprovalInstance::find($instanceId), $this->demoId('wh-keeper')));
-            $this->assertTrue($svc->canDecide(ApprovalInstance::find($instanceId), $this->demoId('gm')));
+            $this->assertFalse($svc->canDecide(ApprovalInstance::find($instanceId), $this->demoId('王五')));
+            $this->assertTrue($svc->canDecide(ApprovalInstance::find($instanceId), $this->demoId('高远')));
         } finally {
             DB::rollBack();
         }
@@ -214,7 +214,7 @@ class ApprovalFlowTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $accountant = $this->actingAsDemo('accountant');
+            $accountant = $this->actingAsDemo('陈静');
             $customerId = (int) DB::table('customers')->value('id');
 
             $this->post('/finance/invoices', [
@@ -231,7 +231,7 @@ class ApprovalFlowTest extends TestCase
                 ->where('business_id', $invoice->id)->firstOrFail();
             // 会计本人是制单人 → 引擎跳过第 1 级，直接停在总经理
             $this->assertSame(2, (int) $instance->current_step);
-            $this->assertSame($this->demoId('gm'), (int) $instance->flow->steps_json[1]['approver_id']);
+            $this->assertSame($this->demoId('高远'), (int) $instance->flow->steps_json[1]['approver_id']);
 
             // 会计自己批不了（会计是制单人 = 申请人，自批直接被拒）
             try {
@@ -243,7 +243,7 @@ class ApprovalFlowTest extends TestCase
             $this->assertSame('pending_approval', $invoice->fresh()->status);
 
             // 总经理批准 → 才变 unpaid
-            $this->actingAsDemo('gm');
+            $this->actingAsDemo('高远');
             app(ApprovalService::class)->decide($instance->id, true, '同意开票');
             $this->assertSame('unpaid', $invoice->fresh()->status);
         } finally {
@@ -257,7 +257,7 @@ class ApprovalFlowTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $cashier = $this->actingAsDemo('cashier');
+            $cashier = $this->actingAsDemo('刘芳');
             $supplierId = (int) DB::table('suppliers')->value('id');
 
             $paymentId = (int) DB::table('payments')->insertGetId([

@@ -24,7 +24,7 @@
             <tr>
                 <td><span class="badge bg-info">{{ $f->type }}</span></td>
                 <td>{{ $f->content }}</td>
-                <td>{{ $f->user->name ?? '-' }}</td>
+                <td>{{ $f->user->identity_label ?? '-' }}</td>
                 <td class="small">{{ $f->followed_at?->format('Y-m-d H:i') }}</td>
             </tr>
             @empty

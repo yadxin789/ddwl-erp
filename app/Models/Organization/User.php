@@ -92,4 +92,30 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Position::class);
     }
+
+    /**
+     * 操作人统一展示口径：姓名 +（登录账号）。
+     * 姓名与账号相同（实名账号）时只显示一次，避免"张三（张三）"。
+     */
+    public function getIdentityLabelAttribute(): string
+    {
+        $name = trim((string) $this->name);
+        $username = trim((string) $this->username);
+
+        if ($name === '') {
+            $name = $username;
+        }
+
+        if ($username === '' || $name === $username) {
+            return $name !== '' ? $name : '-';
+        }
+
+        return $name . '（' . $username . '）';
+    }
+
+    /** 岗位名称；岗位不是人名，只在需要时作为附属信息展示。 */
+    public function getPositionLabelAttribute(): string
+    {
+        return (string) ($this->position?->pos_name ?? '');
+    }
 }

@@ -43,7 +43,7 @@ class QualityPendingTest extends TestCase
         $po = \App\Models\Purchasing\PurchaseOrder::create([
             'po_no' => 'PO-IQC-' . substr((string) uniqid(), -6),
             'supplier_id' => $this->supplierId,
-            'buyer_id' => (int) User::where('username', 'purchase')->value('id'),
+            'buyer_id' => (int) User::where('username', '赵六')->value('id'),
             'order_date' => now()->toDateString(),
             'status' => 'confirmed',
             'total_amount' => 200,
@@ -63,7 +63,7 @@ class QualityPendingTest extends TestCase
             'supplier_id' => $this->supplierId,
             'receipt_date' => now()->toDateString(),
             'warehouse_id' => $this->warehouseId,
-            'receiver_id' => (int) User::where('username', 'wh-receiver')->value('id'),
+            'receiver_id' => (int) User::where('username', '卢伟')->value('id'),
             'department_id' => (int) Warehouse::where('id', $this->warehouseId)->value('department_id'),
             'status' => 'pending_qc',
             'total_qty' => 100,
@@ -97,7 +97,7 @@ class QualityPendingTest extends TestCase
 
     public function test_pending_board_count_matches_qc_hold_batches(): void
     {
-        $this->actingAs(User::where('username', 'iqc-inspector')->firstOrFail());
+        $this->actingAs(User::where('username', '郑一')->firstOrFail());
 
         $qcHoldRows = InventoryStock::withoutGlobalScopes()
             ->where('status', 'qc_hold')->where('qty', '>', 0)->count();
@@ -109,7 +109,7 @@ class QualityPendingTest extends TestCase
         $res->assertSee($this->lotNo);
 
         // 品质主管也看得到（不锁阶段）
-        $this->actingAs(User::where('username', 'quality')->firstOrFail());
+        $this->actingAs(User::where('username', '周九')->firstOrFail());
         $this->get(route('quality.pending'))->assertOk()->assertSee('品质主管视角');
     }
 
@@ -123,7 +123,7 @@ class QualityPendingTest extends TestCase
             'remark' => '阶段锁定测试',
         ];
 
-        $this->actingAs(User::where('username', 'iqc-inspector')->firstOrFail());
+        $this->actingAs(User::where('username', '郑一')->firstOrFail());
 
         // 跨阶段：IQC 提交 IPQC → 422
         $this->post(route('quality.inspections.store'), $payload + ['stage' => 'IPQC'])
@@ -139,7 +139,7 @@ class QualityPendingTest extends TestCase
         ]);
 
         // IPQC 检验员提交 IQC → 422
-        $this->actingAs(User::where('username', 'ipqc-inspector')->firstOrFail());
+        $this->actingAs(User::where('username', '邓雪')->firstOrFail());
         $this->post(route('quality.inspections.store'), $payload + ['stage' => 'IQC'])
             ->assertStatus(422);
         $this->post(route('quality.inspections.store'), $payload + ['stage' => 'IPQC'])
@@ -148,7 +148,7 @@ class QualityPendingTest extends TestCase
 
     public function test_iqc_decision_writes_bound_inspection_record(): void
     {
-        $this->actingAs(User::where('username', 'iqc-inspector')->firstOrFail());
+        $this->actingAs(User::where('username', '郑一')->firstOrFail());
 
         $this->post(route('purchase.receipts.inspect', $this->receiptId), [
             'lines' => [[
@@ -170,7 +170,7 @@ class QualityPendingTest extends TestCase
             ->where('ref_type', 'goods_receipt')->where('ref_id', $this->receiptId)->firstOrFail();
         $this->assertSame('95.00', (string) $record->qualified_qty);
         $this->assertSame('5.00', (string) $record->defect_qty);
-        $this->assertSame((int) User::where('username', 'iqc-inspector')->value('id'), (int) $record->inspector_id);
+        $this->assertSame((int) User::where('username', '郑一')->value('id'), (int) $record->inspector_id);
 
         // 可按收货单反查
         $this->get(route('quality.inspections'))

@@ -22,7 +22,7 @@
                     </td>
                     <td>{{ $project->project_name }}</td>
                     <td class="text-muted small">{{ $project->product_model ?: '-' }}</td>
-                    <td class="small">{{ $project->creator->name ?? '-' }}</td>
+                    <td class="small">{{ $project->creator->identity_label ?? '-' }}</td>
                     <td class="small text-muted">
                         {{ $project->start_date?->format('Y-m-d') ?? '-' }} ~ {{ $project->end_date?->format('Y-m-d') ?? '-' }}
                     </td>

@@ -28,7 +28,7 @@ class PlatformSetupTest extends TestCase
 
     private function operator(): User
     {
-        return User::where('username', 'ecom-operator')->firstOrFail();
+        return User::where('username', '魏晨')->firstOrFail();
     }
 
     public function test_wizard_shows_domestic_and_overseas_presets(): void

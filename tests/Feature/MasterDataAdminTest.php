@@ -34,8 +34,8 @@ class MasterDataAdminTest extends TestCase
         parent::setUp();
         DB::beginTransaction();
 
-        $this->admin = User::where('username', 'admin')->firstOrFail();
-        $this->manager = User::where('username', 'rnd-manager')->firstOrFail();
+        $this->admin = User::where('username', '张三')->firstOrFail();
+        $this->manager = User::where('username', '王明')->firstOrFail();
         $this->departmentId = Department::where('dept_code', 'D-RND')->value('id');
     }
 
@@ -133,7 +133,7 @@ class MasterDataAdminTest extends TestCase
     public function test_referenced_task_type_cannot_be_deleted(): void
     {
         $type = RndTaskType::firstOrFail();
-        $executorId = User::where('username', 'engineer')->value('id') ?: $this->manager->id;
+        $executorId = User::where('username', '孙八')->value('id') ?: $this->manager->id;
 
         $projectId = DB::table('rnd_projects')->insertGetId([
             'project_code' => 'TEST-MD-DEL-' . uniqid(),
@@ -355,8 +355,8 @@ class MasterDataAdminTest extends TestCase
 
     public function test_customer_and_supplier_forms_use_payment_term_dictionary(): void
     {
-        $sales = User::where('username', 'sales')->firstOrFail();
-        $purchase = User::where('username', 'purchase')->firstOrFail();
+        $sales = User::where('username', '钱七')->firstOrFail();
+        $purchase = User::where('username', '赵六')->firstOrFail();
 
         $this->actingAs($sales)
             ->get(route('customers.create'))
@@ -402,7 +402,7 @@ class MasterDataAdminTest extends TestCase
         $term = PaymentTerm::where('code', 'NET60')->firstOrFail();
         $term->update(['status' => false]);
 
-        $sales = User::where('username', 'sales')->firstOrFail();
+        $sales = User::where('username', '钱七')->firstOrFail();
         $this->actingAs($sales)
             ->get(route('customers.create'))
             ->assertOk()

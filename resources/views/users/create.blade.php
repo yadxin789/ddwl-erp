@@ -10,12 +10,12 @@
             @csrf
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">用户名 <span class="text-danger">*</span></label>
+                    <label class="form-label">登录账号 <span class="text-danger">*</span></label>
                     <input type="text" name="username" class="form-control" value="{{ old('username') }}" required>
                     @error('username') <div class="text-danger small">{{ $message }}</div> @enderror
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">姓名 <span class="text-danger">*</span></label>
+                    <label class="form-label">用户名（姓名） <span class="text-danger">*</span></label>
                     <input type="text" name="name" class="form-control" value="{{ old('name') }}" required>
                 </div>
                 <div class="col-md-6">

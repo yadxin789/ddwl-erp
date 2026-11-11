@@ -26,8 +26,8 @@ class RndProjectCreateTest extends TestCase
         parent::setUp();
         DB::beginTransaction();
 
-        $this->manager = User::where('username', 'rnd-manager')->firstOrFail();
-        $this->auditor = User::where('username', 'eng-me')->firstOrFail();
+        $this->manager = User::where('username', '王明')->firstOrFail();
+        $this->auditor = User::where('username', '韩磊')->firstOrFail();
     }
 
     protected function tearDown(): void
@@ -46,7 +46,7 @@ class RndProjectCreateTest extends TestCase
             ->assertSee('部门天数配置')
             ->assertSee('任务配置')
             ->assertSee('任务名称')
-            ->assertSee('"username":"rnd-manager"', false);
+            ->assertSee('"label":"王明"', false);
     }
 
     public function test_template_create_page_renders(): void
@@ -57,7 +57,7 @@ class RndProjectCreateTest extends TestCase
             ->assertOk()
             ->assertSee('创建新研发项目模板')
             ->assertSee('任务名称')
-            ->assertSee('"username":"rnd-manager"', false);
+            ->assertSee('"label":"王明"', false);
     }
 
     public function test_project_store_creates_named_tasks_with_serial_department_dates(): void
@@ -103,7 +103,7 @@ class RndProjectCreateTest extends TestCase
 
         $this->get(route('rnd.projects.show', $project))
             ->assertOk()
-            ->assertSee('"username":"' . $this->manager->username . '"', false);
+            ->assertSee('"label":"' . $this->manager->username . '"', false);
     }
 
     public function test_project_store_accepts_multiple_tasks_of_same_type(): void

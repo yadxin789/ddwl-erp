@@ -50,8 +50,8 @@
                         <span class="badge bg-{{ $color }}">{{ $label }}</span>
                     </td>
                     <td class="small text-muted">
-                        {{ $req->requester->name ?? '-' }}
-                        @if ($req->approver) / {{ $req->approver->name }} @endif
+                        {{ $req->requester->identity_label ?? '-' }}
+                        @if ($req->approver) / {{ $req->approver->identity_label }} @endif
                     </td>
                     <td>
                         @if ($req->status === 'pending_approval')

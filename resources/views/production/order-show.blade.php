@@ -109,7 +109,7 @@
                 @forelse ($order->operationLogs as $log)
                 <tr>
                     <td>{{ $log->reported_at }}</td><td>{{ $log->operation_name }}</td>
-                    <td>{{ $log->worker->name ?? '-' }}</td>
+                    <td>{{ $log->worker->identity_label ?? '-' }}</td>
                     <td class="text-end">{{ rtrim(rtrim(number_format($log->good_qty,2),'0'),'.') }}</td>
                     <td class="text-end">{{ rtrim(rtrim(number_format($log->defective_qty,2),'0'),'.') }}</td>
                     <td class="text-end">{{ $log->work_hours }}</td>

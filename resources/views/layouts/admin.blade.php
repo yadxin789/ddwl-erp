@@ -37,7 +37,10 @@
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li>
                         <span class="dropdown-item-text small text-muted">
-                            {{ auth()->user()->email ?? auth()->user()->username }}
+                            {{ auth()->user()->identity_label }}
+                            @if(auth()->user()->position_label)
+                                · {{ auth()->user()->position_label }}
+                            @endif
                         </span>
                     </li>
                     <li><hr class="dropdown-divider"></li>

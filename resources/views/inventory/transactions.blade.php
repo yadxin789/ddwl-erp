@@ -46,7 +46,7 @@
                         <td class="text-end">{{ number_format($txn->qty_after) }}</td>
                         <td class="small">{{ $txn->from_status ?? '-' }} → {{ $txn->to_status ?? '-' }}</td>
                         <td class="small">{{ $txn->ref_type }}<span class="text-muted">#{{ $txn->ref_id ?? '-' }}</span></td>
-                        <td>{{ $txn->operator->name ?? '系统' }}</td>
+                        <td>{{ $txn->operator->identity_label ?? '系统' }}</td>
                     </tr>
                     @empty
                     <tr><td colspan="10" class="text-center text-muted py-4">暂无流水数据</td></tr>

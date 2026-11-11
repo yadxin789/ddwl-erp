@@ -7,7 +7,7 @@
     <div class="card-header">企业微信绑定</div>
     <div class="card-body">
         <div class="mb-3">
-            <span class="text-muted">当前账号：</span><strong>{{ $user->name }}</strong>
+            <span class="text-muted">当前账号：</span><strong>{{ $user->identity_label }}</strong>
             <span class="text-muted ms-3">绑定状态：</span>
             @if ($bound)
                 <span class="badge bg-success">企业微信已接入</span>

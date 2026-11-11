@@ -49,7 +49,7 @@ class SoDTest extends TestCase
 
     public function test_iqc_can_open_receipts_and_reach_inspect_action(): void
     {
-        $this->actingAsDemo('iqc-inspector');
+        $this->actingAsDemo('郑一');
 
         // 有 purchase.view：可看收货单列表
         $this->get('/purchase/receipts')->assertStatus(200);
@@ -69,7 +69,7 @@ class SoDTest extends TestCase
 
     public function test_warehouse_receiver_cannot_inspect(): void
     {
-        $this->actingAsDemo('wh-receiver');
+        $this->actingAsDemo('卢伟');
 
         $this->get('/purchase/receipts')->assertStatus(200);
 
@@ -97,7 +97,7 @@ class SoDTest extends TestCase
 
     public function test_purchase_specialist_cannot_confirm_or_close(): void
     {
-        $this->actingAsDemo('purchase');
+        $this->actingAsDemo('赵六');
 
         $this->assertFalse($this->roleHas('role_pur_specialist', 'purchase.confirm'),
             '采购专员不应持有订单确认权（v1.3 §4.10 禁区）');
@@ -119,7 +119,7 @@ class SoDTest extends TestCase
 
     public function test_accountant_cannot_execute_payment(): void
     {
-        $this->actingAsDemo('accountant');
+        $this->actingAsDemo('陈静');
 
         // 会计可看收付款页（只读）
         $this->get('/finance/payments')->assertStatus(200);
@@ -130,7 +130,7 @@ class SoDTest extends TestCase
 
     public function test_cashier_can_execute_payment(): void
     {
-        $this->actingAsDemo('cashier');
+        $this->actingAsDemo('刘芳');
 
         // 有执行权：空表单触发校验后回跳（302），不是 403
         $this->post('/finance/payments')->assertStatus(302);
@@ -138,7 +138,7 @@ class SoDTest extends TestCase
 
     public function test_cashier_cannot_issue_invoice_or_bill(): void
     {
-        $this->actingAsDemo('cashier');
+        $this->actingAsDemo('刘芳');
 
         $this->post('/finance/invoices')->assertStatus(403);
         $this->post('/finance/bills')->assertStatus(403);
@@ -146,7 +146,7 @@ class SoDTest extends TestCase
 
     public function test_accountant_can_issue_invoice_and_bill(): void
     {
-        $this->actingAsDemo('accountant');
+        $this->actingAsDemo('陈静');
 
         $this->post('/finance/invoices')->assertStatus(302);
         $this->post('/finance/bills')->assertStatus(302);
@@ -156,10 +156,10 @@ class SoDTest extends TestCase
 
     public function test_stocktake_create_is_warehouse_job_not_receiver(): void
     {
-        $this->actingAsDemo('wh-receiver');
+        $this->actingAsDemo('卢伟');
         $this->post('/production/stocktakes')->assertStatus(403);
 
-        $this->actingAsDemo('wh-keeper');
+        $this->actingAsDemo('王五');
         // 空表单：通过权限层，校验后回跳（302），不是 403
         $this->post('/production/stocktakes')->assertStatus(302);
         $this->assertTrue($this->roleHas('role_wh_keeper', 'inventory.stocktake'));
@@ -167,7 +167,7 @@ class SoDTest extends TestCase
 
     public function test_stocktake_adjuster_cannot_approve_own_adjustment(): void
     {
-        $this->actingAsDemo('wh-keeper');
+        $this->actingAsDemo('王五');
 
         // 发起权有，审批权没有：同一人不得既发起又批准
         $this->assertTrue($this->roleHas('role_wh_keeper', 'inventory.adjust.request'));
@@ -181,7 +181,7 @@ class SoDTest extends TestCase
 
     public function test_return_creator_cannot_approve_and_other_roles_are_403(): void
     {
-        $this->actingAsDemo('sales');
+        $this->actingAsDemo('钱七');
         $this->assertTrue($this->roleHas('role_sal_specialist', 'sales.create'));
         $this->assertFalse($this->roleHas('role_sal_specialist', 'sales.return.approve'),
             '销售专员不得审批自己发起的退货（v1.3 §4.15 禁区）');
@@ -208,7 +208,7 @@ class SoDTest extends TestCase
             $this->post("/approvals/{$instance->id}/decide", ['pass' => 1])->assertStatus(403);
 
             // 无关岗位（采购）尝试审批 → 403
-            $this->actingAsDemo('purchase');
+            $this->actingAsDemo('赵六');
             $this->post("/approvals/{$instance->id}/decide", ['pass' => 1])->assertStatus(403);
 
             $this->assertSame('pending', CustomerReturn::findOrFail($ret->id)->status, '被拒的审批不得改变单据状态');

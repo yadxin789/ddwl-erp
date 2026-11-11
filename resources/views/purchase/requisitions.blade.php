@@ -15,7 +15,7 @@
             <tr>
                 <td class="font-monospace">{{ $r->req_no }}</td>
                 <td>{{ $r->title }}</td>
-                <td>{{ $r->requester->name ?? '-' }}</td>
+                <td>{{ $r->requester->identity_label ?? '-' }}</td>
                 <td>{{ $r->need_date }}</td>
                 <td><span class="badge bg-secondary text-dark">{{ $r->status }}</span></td>
                 <td class="small">{{ $r->created_at?->format('Y-m-d') }}</td>

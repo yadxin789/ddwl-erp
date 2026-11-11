@@ -34,7 +34,7 @@
     <div class="card-body">
         <div class="row mb-3">
             <div class="col-md-3"><span class="text-muted">供应商：</span>{{ $order->supplier->supplier_name ?? '-' }}</div>
-            <div class="col-md-3"><span class="text-muted">采购员：</span>{{ $order->buyer->name ?? '-' }}</div>
+            <div class="col-md-3"><span class="text-muted">采购员：</span>{{ $order->buyer->identity_label ?? '-' }}</div>
             <div class="col-md-3"><span class="text-muted">订单日期：</span>{{ $order->order_date }}</div>
             <div class="col-md-3"><span class="text-muted">预计到货：</span>{{ $order->expected_date ?? '-' }}</div>
             <div class="col-md-3"><span class="text-muted">状态：</span>{{ $order->status }}</div>

@@ -26,8 +26,8 @@
                             <div class="small text-muted">{{ $doc->task->taskType->name }}</div>
                         @endif
                     </td>
-                    <td>{{ $doc->task->executor->username ?? '-' }}</td>
-                    <td>{{ $doc->uploader->name ?? '-' }}</td>
+                    <td>{{ $doc->task->executor->identity_label ?? '-' }}</td>
+                    <td>{{ $doc->uploader->identity_label ?? '-' }}</td>
                     <td class="small">
                         v{{ $doc->version_no }} ·
                         @if ($doc->file)

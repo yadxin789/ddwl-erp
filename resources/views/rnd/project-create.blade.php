@@ -221,7 +221,7 @@
 
 @section('scripts')
 <script>
-    const usersByDept = @json($usersByDept);
+    const usersByDept = @json($usersByDept, JSON_UNESCAPED_UNICODE);
     const defaultExecutors = @json($defaultExecutors);
     const defaultAuditors = @json($defaultAuditors);
     const deptOrder = @json($deptOrder);
@@ -330,7 +330,7 @@
             return;
         }
         list.forEach(function (user) {
-            select.appendChild(new Option(user.username, user.id));
+            select.appendChild(new Option(user.label, user.id));
         });
         const defaults = type === 'executor' ? defaultExecutors : defaultAuditors;
         select.value = selectedId || defaults[deptId] || list[0].id;

@@ -61,8 +61,11 @@
 
 <div class="card mt-3">
     <div class="card-body text-muted small">
-        当前登录：<strong>{{ auth()->user()->name }}</strong>（{{ auth()->user()->username }}） ·
-        角色：@foreach(auth()->user()->getRoleNames() as $r)<span class="badge bg-primary">{{ $r }}</span> @endforeach
+        当前登录：<strong>{{ auth()->user()->identity_label }}</strong>
+        @if(auth()->user()->position_label)
+            · 岗位：{{ auth()->user()->position_label }}
+        @endif
+        · 角色：@foreach(auth()->user()->getRoleNames() as $r)<span class="badge bg-primary">{{ $r }}</span> @endforeach
     </div>
 </div>
 @endsection

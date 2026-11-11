@@ -36,7 +36,7 @@ class MaskingTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $sales = User::where('username', 'sales')->firstOrFail();
+            $sales = User::where('username', '钱七')->firstOrFail();
             $code = 'ZZMASK' . substr((string) time(), -6);
 
             Customer::create([
@@ -62,7 +62,7 @@ class MaskingTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $hr = User::where('username', 'adm-manager')->firstOrFail();
+            $hr = User::where('username', '苏琴')->firstOrFail();
             $emp = HrEmployee::create([
                 'emp_no' => 'MASK' . substr((string) time(), -6),
                 'name' => '掩码测试员工',

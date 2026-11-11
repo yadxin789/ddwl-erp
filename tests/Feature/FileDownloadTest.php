@@ -39,9 +39,9 @@ class FileDownloadTest extends TestCase
 
         DB::beginTransaction();
 
-        $this->creator = User::where('username', 'rnd-manager')->firstOrFail();
-        $this->executor = User::where('username', 'engineer')->firstOrFail();
-        $this->outsider = User::where('username', 'eng-sw')->firstOrFail();
+        $this->creator = User::where('username', '王明')->firstOrFail();
+        $this->executor = User::where('username', '孙八')->firstOrFail();
+        $this->outsider = User::where('username', '唐斌')->firstOrFail();
 
         $project = RndProject::create([
             'project_code' => NumberGenerator::generate('rnd_project'),
@@ -98,7 +98,7 @@ class FileDownloadTest extends TestCase
 
     public function test_shared_resource_is_downloadable_by_any_position(): void
     {
-        $user = User::where('username', 'sales')->firstOrFail();
+        $user = User::where('username', '钱七')->firstOrFail();
         $this->actingAs($user);
 
         $response = $this->get("/files/{$this->resourceFile->id}/download");

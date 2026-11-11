@@ -63,7 +63,7 @@ class MrpTest extends TestCase
         $so = SalesOrder::create([
             'order_no' => 'SO-MRP-' . $suffix, 'customer_id' => (int) DB::table('customers')->value('id'),
             'order_date' => now()->toDateString(), 'delivery_date' => now()->addDays(5)->toDateString(),
-            'status' => 'confirmed', 'total_amount' => 1000, 'salesperson_id' => (int) User::where('username', 'sales')->value('id'),
+            'status' => 'confirmed', 'total_amount' => 1000, 'salesperson_id' => (int) User::where('username', '钱七')->value('id'),
         ]);
         SalesOrderLine::create(['order_id' => $so->id, 'material_id' => $this->fgId, 'qty' => 100, 'shipped_qty' => 0, 'unit_price' => 10]);
 
@@ -77,7 +77,7 @@ class MrpTest extends TestCase
         $supplierId = (int) DB::table('suppliers')->value('id');
         $po = PurchaseOrder::create([
             'po_no' => 'PO-MRP-' . $suffix, 'supplier_id' => $supplierId,
-            'buyer_id' => (int) User::where('username', 'purchase')->value('id'),
+            'buyer_id' => (int) User::where('username', '赵六')->value('id'),
             'order_date' => now()->toDateString(), 'status' => 'confirmed', 'total_amount' => 80,
         ]);
         PurchaseOrderLine::create(['po_id' => $po->id, 'material_id' => $this->rm1Id, 'qty' => 40, 'received_qty' => 20, 'unit_price' => 2]);
@@ -91,7 +91,7 @@ class MrpTest extends TestCase
 
     public function test_net_requirement_equals_gross_minus_available_and_transit(): void
     {
-        $this->actingAs(User::where('username', 'purchase')->firstOrFail());
+        $this->actingAs(User::where('username', '赵六')->firstOrFail());
 
         $count = app(MrpService::class)->run();
         $this->assertGreaterThan(0, $count);
@@ -113,7 +113,7 @@ class MrpTest extends TestCase
 
     public function test_independent_work_order_adds_gross_but_linked_one_does_not_double_count(): void
     {
-        $this->actingAs(User::where('username', 'purchase')->firstOrFail());
+        $this->actingAs(User::where('username', '赵六')->firstOrFail());
 
         // 独立工单（无销售单）50 → RM2 毛需求 +50
         ProductionOrder::create([
@@ -127,7 +127,7 @@ class MrpTest extends TestCase
             'start_date' => now()->toDateString(),
             'end_date' => now()->addDays(3)->toDateString(),
             'department_id' => (int) DB::table('departments')->value('id'),
-            'created_by' => (int) User::where('username', 'prod-supervisor')->value('id'),
+            'created_by' => (int) User::where('username', '吴十')->value('id'),
         ]);
 
         app(MrpService::class)->run();
@@ -147,7 +147,7 @@ class MrpTest extends TestCase
             'end_date' => now()->addDays(3)->toDateString(),
             'sales_order_id' => (int) SalesOrder::where('status', 'confirmed')->value('id'),
             'department_id' => (int) DB::table('departments')->value('id'),
-            'created_by' => (int) User::where('username', 'prod-supervisor')->value('id'),
+            'created_by' => (int) User::where('username', '吴十')->value('id'),
         ]);
         app(MrpService::class)->run();
         $rm2b = MrpSuggestion::where('material_id', $this->rm2Id)->where('status', 'open')->firstOrFail();
@@ -156,7 +156,7 @@ class MrpTest extends TestCase
 
     public function test_convert_to_purchase_requisition_closes_suggestion(): void
     {
-        $this->actingAs(User::where('username', 'purchase')->firstOrFail());
+        $this->actingAs(User::where('username', '赵六')->firstOrFail());
         app(MrpService::class)->run();
 
         $row = MrpSuggestion::where('material_id', $this->rm1Id)->where('status', 'open')->firstOrFail();

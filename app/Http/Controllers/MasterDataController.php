@@ -482,7 +482,7 @@ class MasterDataController extends Controller
     {
         return [
             'flow' => $flow,
-            'users' => User::query()->where('status', 1)->orderBy('username')->get(['id', 'username', 'department_id']),
+            'users' => User::query()->where('status', 1)->orderBy('name')->get(['id', 'name', 'username', 'department_id']),
             'permissions' => Permission::query()->orderBy('name')->pluck('name'),
         ];
     }

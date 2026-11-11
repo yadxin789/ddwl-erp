@@ -12,7 +12,7 @@
         <thead class="table-light"><tr><th>房间号</th><th>名称</th><th>主持人</th><th>状态</th><th>开始时间</th></tr></thead>
         <tbody>
             @forelse ($rooms as $r)
-            <tr><td class="font-monospace">{{ $r->room_no }}</td><td>{{ $r->name }}</td><td>{{ $r->host->name ?? '-' }}</td><td><span class="badge bg-secondary text-dark">{{ \App\Enums\VoiceRoomStatus::tryFrom($r->status)?->label() ?? $r->status }}</span></td><td>{{ $r->started_at?->format('Y-m-d H:i') ?? '-' }}</td></tr>
+            <tr><td class="font-monospace">{{ $r->room_no }}</td><td>{{ $r->name }}</td><td>{{ $r->host->identity_label ?? '-' }}</td><td><span class="badge bg-secondary text-dark">{{ \App\Enums\VoiceRoomStatus::tryFrom($r->status)?->label() ?? $r->status }}</span></td><td>{{ $r->started_at?->format('Y-m-d H:i') ?? '-' }}</td></tr>
             @empty
             <tr><td colspan="5" class="text-center text-muted py-4">暂无会议室（WebRTC 待接入）</td></tr>
             @endforelse

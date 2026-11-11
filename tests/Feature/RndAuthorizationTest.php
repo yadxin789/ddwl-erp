@@ -36,10 +36,10 @@ class RndAuthorizationTest extends TestCase
 
         DB::beginTransaction();
 
-        $this->creator = User::where('username', 'rnd-manager')->firstOrFail();
-        $this->executor = User::where('username', 'engineer')->firstOrFail();
-        $this->auditor = User::where('username', 'eng-me')->firstOrFail();
-        $this->outsider = User::where('username', 'eng-sw')->firstOrFail();
+        $this->creator = User::where('username', '王明')->firstOrFail();
+        $this->executor = User::where('username', '孙八')->firstOrFail();
+        $this->auditor = User::where('username', '韩磊')->firstOrFail();
+        $this->outsider = User::where('username', '唐斌')->firstOrFail();
 
         $this->project = RndProject::create([
             'project_code' => NumberGenerator::generate('rnd_project'),

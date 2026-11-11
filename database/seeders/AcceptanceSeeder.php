@@ -48,10 +48,10 @@ class AcceptanceSeeder extends Seeder
         $location = WarehouseLocation::where('warehouse_id', $warehouse->id)->where('zone', '合格区')->first();
         $locationId = $location?->id ?? 1;
 
-        $adminId = (int) (User::where('username', 'admin')->value('id') ?? 0);
-        $purchaseUser = User::where('username', 'purchase')->first();
-        $salesUser = User::where('username', 'sales')->first();
-        $prodUser = User::where('username', 'prod-supervisor')->first();
+        $adminId = (int) (User::where('username', '张三')->value('id') ?? 0);
+        $purchaseUser = User::where('username', '赵六')->first();
+        $salesUser = User::where('username', '钱七')->first();
+        $prodUser = User::where('username', '吴十')->first();
         $purchaseId = (int) ($purchaseUser?->id ?? $adminId);
         $salesId = (int) ($salesUser?->id ?? $adminId);
         $prodId = (int) ($prodUser?->id ?? $adminId);

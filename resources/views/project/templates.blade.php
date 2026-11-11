@@ -38,7 +38,7 @@
                                     <span class="badge bg-secondary me-1 mb-1">{{ $type->name }}</span>
                                 @endforeach
                             </td>
-                            <td>{{ $template->user->name ?? '-' }}</td>
+                            <td>{{ $template->user->identity_label ?? '-' }}</td>
                             <td>{{ $template->created_at?->format('Y-m-d H:i') ?? '-' }}</td>
                             <td>
                                 <a href="{{ route('project.templates.show', $template) }}" class="btn btn-sm btn-outline-primary">

@@ -49,7 +49,7 @@
                             @else <span class="badge bg-light text-muted">{{ $label }}</span> @endif
                         </td>
                         <td>{{ $bom->lines_count ?? '-' }}</td>
-                        <td>{{ $bom->creator->name ?? '-' }}</td>
+                        <td>{{ $bom->creator->identity_label ?? '-' }}</td>
                         <td>
                             <a href="{{ route('bom.show', $bom) }}" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-eye"></i></a>
                         </td>

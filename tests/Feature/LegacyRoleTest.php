@@ -23,7 +23,7 @@ class LegacyRoleTest extends TestCase
             $this->assertArrayHasKey($target, config('navigation.positions'), "{$legacy} 的目标岗位 {$target} 不存在");
         }
 
-        $this->assertSame(['system_admin'], config('navigation.legacy_role_whitelist.admin'));
+        $this->assertSame(['system_admin'], config('navigation.legacy_role_whitelist')['张三']);
         $this->assertCount(4, config('navigation.compat_roles'), '兼容角色应保持 4 个');
     }
 
@@ -36,15 +36,15 @@ class LegacyRoleTest extends TestCase
         $out = Artisan::output();
         $this->assertStringContainsString('旧角色回收巡检', $out);
         $this->assertStringContainsString('2026-12-31', $out);
-        $this->assertStringContainsString('wh-keeper', $out);
-        $this->assertStringContainsString('白名单 admin', $out);
+        $this->assertStringContainsString('王五', $out);
+        $this->assertStringContainsString('白名单 张三', $out);
 
         $this->assertFileExists($snapshot);
         $payload = json_decode(file_get_contents($snapshot), true);
         $this->assertSame(7, $payload['summary']['legacy_roles']);
         $this->assertCount(4, $payload['compat']);
-        $this->assertArrayHasKey('wh-keeper', $payload['accounts']);
-        $this->assertNotEmpty($payload['accounts']['wh-keeper']['business']);
+        $this->assertArrayHasKey('王五', $payload['accounts']);
+        $this->assertNotEmpty($payload['accounts']['王五']['business']);
 
         @unlink($snapshot);
     }
@@ -65,7 +65,7 @@ class LegacyRoleTest extends TestCase
 
     public function test_dry_run_does_not_change_role_bindings(): void
     {
-        $user = User::where('username', 'sales')->firstOrFail();
+        $user = User::where('username', '钱七')->firstOrFail();
         $before = $user->getRoleNames()->all();
 
         Artisan::call('erp:legacy-role:migrate');
@@ -77,7 +77,7 @@ class LegacyRoleTest extends TestCase
 
     public function test_force_migration_switches_legacy_to_position_role_and_is_idempotent(): void
     {
-        $user = User::where('username', 'sales')->firstOrFail();
+        $user = User::where('username', '钱七')->firstOrFail();
         $this->assertTrue($user->hasRole('sales_specialist'));
         $this->assertTrue($user->hasRole('role_sal_specialist'));
 
@@ -94,7 +94,7 @@ class LegacyRoleTest extends TestCase
             $this->assertTrue($user->fresh()->hasRole('role_sal_specialist'));
 
             // 白名单 admin 不受影响
-            $admin = User::where('username', 'admin')->firstOrFail();
+            $admin = User::where('username', '张三')->firstOrFail();
             $this->assertTrue($admin->hasRole('system_admin'), '白名单账号的旧角色必须保留');
         } finally {
             DB::rollBack();

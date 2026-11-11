@@ -53,7 +53,7 @@ class FinanceSettlementTest extends TestCase
             'method' => 'bank',
             'status' => $status,
             'paid_at' => now()->toDateString(),
-            'user_id' => (int) DB::table('users')->where('username', 'cashier')->value('id'),
+            'user_id' => (int) DB::table('users')->where('username', '刘芳')->value('id'),
         ]);
     }
 
@@ -61,7 +61,7 @@ class FinanceSettlementTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $this->actingAsDemo('accountant');
+            $this->actingAsDemo('陈静');
             $customerId = (int) DB::table('customers')->value('id');
             $order = SalesOrder::create([
                 'order_no' => 'SO-FIN' . substr(uniqid(), -6),
@@ -70,7 +70,7 @@ class FinanceSettlementTest extends TestCase
                 'status' => 'confirmed',
                 'total_amount' => 100,
                 'shipped_qty' => 5,
-                'salesperson_id' => (int) DB::table('users')->where('username', 'sales')->value('id'),
+                'salesperson_id' => (int) DB::table('users')->where('username', '钱七')->value('id'),
             ]);
             SalesOrderLine::create([
                 'order_id' => $order->id,
@@ -98,7 +98,7 @@ class FinanceSettlementTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $this->actingAsDemo('cashier');
+            $this->actingAsDemo('刘芳');
             $invoice = $this->makeInvoice(100);
             $payment = $this->makePayment('in', 60);
 
@@ -129,7 +129,7 @@ class FinanceSettlementTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $this->actingAsDemo('cashier');
+            $this->actingAsDemo('刘芳');
             $invoice = $this->makeInvoice(100);
             $payment = $this->makePayment('in', 60, 'pending');
 
@@ -156,7 +156,7 @@ class FinanceSettlementTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $this->actingAsDemo('cashier');
+            $this->actingAsDemo('刘芳');
             $invoice = $this->makeInvoice(100);
             $payment1 = $this->makePayment('in', 60);
             $payment2 = $this->makePayment('in', 50);
@@ -176,7 +176,7 @@ class FinanceSettlementTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $this->actingAsDemo('cashier');
+            $this->actingAsDemo('刘芳');
             $bill = SupplierBill::create([
                 'bill_no' => 'BILL-T' . substr(uniqid(), -6),
                 'supplier_id' => (int) DB::table('suppliers')->value('id'),
@@ -196,10 +196,10 @@ class FinanceSettlementTest extends TestCase
 
     public function test_three_way_match_page_permission(): void
     {
-        $this->actingAsDemo('accountant');
+        $this->actingAsDemo('陈静');
         $this->get(route('finance.three-way-match'))->assertStatus(200);
 
-        $this->actingAsDemo('sales');
+        $this->actingAsDemo('钱七');
         $this->get(route('finance.three-way-match'))->assertStatus(403);
     }
 
@@ -207,7 +207,7 @@ class FinanceSettlementTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $this->actingAsDemo('accountant');
+            $this->actingAsDemo('陈静');
             $pending = $this->makeInvoice(88);
             $pending->update(['status' => 'pending_approval']);
 

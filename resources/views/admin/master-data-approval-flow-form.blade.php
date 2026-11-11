@@ -75,7 +75,7 @@
                                 <select name="steps[{{ $index }}][approver_id]" class="form-select form-select-sm" required>
                                     <option value="">请选择审批人</option>
                                     @foreach ($users as $user)
-                                        <option value="{{ $user->id }}" @selected((int) ($step['approver_id'] ?? 0) === $user->id)>{{ $user->username }}</option>
+                                        <option value="{{ $user->id }}" @selected((int) ($step['approver_id'] ?? 0) === $user->id)>{{ $user->identity_label }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -83,7 +83,7 @@
                                 <label class="form-label small mb-1">代批人</label>
                                 <select name="steps[{{ $index }}][delegate_ids][]" class="form-select form-select-sm" multiple size="3">
                                     @foreach ($users as $user)
-                                        <option value="{{ $user->id }}" @selected(in_array($user->id, array_map('intval', $step['delegate_ids'] ?? []), true))>{{ $user->username }}</option>
+                                        <option value="{{ $user->id }}" @selected(in_array($user->id, array_map('intval', $step['delegate_ids'] ?? []), true))>{{ $user->identity_label }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -125,7 +125,7 @@
                 <select data-name="approver_id" class="form-select form-select-sm" required>
                     <option value="">请选择审批人</option>
                     @foreach ($users as $user)
-                        <option value="{{ $user->id }}">{{ $user->username }}</option>
+                        <option value="{{ $user->id }}">{{ $user->identity_label }}</option>
                     @endforeach
                 </select>
             </div>
@@ -133,7 +133,7 @@
                 <label class="form-label small mb-1">代批人</label>
                 <select data-name="delegate_ids" class="form-select form-select-sm" multiple size="3">
                     @foreach ($users as $user)
-                        <option value="{{ $user->id }}">{{ $user->username }}</option>
+                        <option value="{{ $user->id }}">{{ $user->identity_label }}</option>
                     @endforeach
                 </select>
             </div>

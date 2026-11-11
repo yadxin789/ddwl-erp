@@ -26,7 +26,7 @@ class WorkspacePagesTest extends TestCase
 
     public function test_warehouse_keeper_pages_open(): void
     {
-        $this->actingAsDemo('wh-keeper');
+        $this->actingAsDemo('王五');
 
         $this->get('/shipping')->assertStatus(200);
         $this->get('/warehouse')->assertStatus(200);
@@ -35,7 +35,7 @@ class WorkspacePagesTest extends TestCase
 
     public function test_production_leader_pages_open(): void
     {
-        $this->actingAsDemo('prod-supervisor');
+        $this->actingAsDemo('吴十');
 
         $this->get('/production/issue-requests')->assertStatus(200);
         $this->get('/production/issue-requests/create')->assertStatus(200);
@@ -43,7 +43,7 @@ class WorkspacePagesTest extends TestCase
 
     public function test_shared_self_service_pages_open_for_any_position(): void
     {
-        $this->actingAsDemo('iqc-inspector');
+        $this->actingAsDemo('郑一');
 
         $this->get('/files/resources')->assertStatus(200);
         $this->get('/project/my')->assertStatus(200);
@@ -55,7 +55,7 @@ class WorkspacePagesTest extends TestCase
      */
     public function test_warehouse_keeper_cannot_create_issue_request(): void
     {
-        $this->actingAsDemo('wh-keeper');
+        $this->actingAsDemo('王五');
 
         $this->get('/production/issue-requests')->assertStatus(403);
     }
@@ -66,7 +66,7 @@ class WorkspacePagesTest extends TestCase
     public function test_dashboard_metrics_are_scoped_by_position(): void
     {
         // IQC：只看待检，不该出现销售/财务口径
-        $this->actingAsDemo('iqc-inspector');
+        $this->actingAsDemo('郑一');
         $response = $this->get('/');
         $response->assertStatus(200);
         $response->assertSee('待检记录');
@@ -74,13 +74,13 @@ class WorkspacePagesTest extends TestCase
         $response->assertDontSee('进行中销售订单');
 
         // 销售专员：看销售与客户，不该看到应付
-        $this->actingAsDemo('sales');
+        $this->actingAsDemo('钱七');
         $response = $this->get('/');
         $response->assertSee('进行中销售订单');
         $response->assertDontSee('应付未付');
 
         // 管理员：只看运维规模，无业务指标
-        $this->actingAsDemo('admin');
+        $this->actingAsDemo('张三');
         $response = $this->get('/');
         $response->assertSee('账号数');
         $response->assertDontSee('应收未收');
@@ -93,23 +93,23 @@ class WorkspacePagesTest extends TestCase
     public function test_report_and_supporting_pages_respect_position_guards(): void
     {
         // 销售专员：报表中心与销售分析可看
-        $this->actingAsDemo('sales');
+        $this->actingAsDemo('钱七');
         $this->get('/reports')->assertStatus(200);
         $this->get('/reports/sales')->assertStatus(200);
 
         // 仓管：报表与他无关
-        $this->actingAsDemo('wh-keeper');
+        $this->actingAsDemo('王五');
         $this->get('/reports/sales')->assertStatus(403);
         $this->get('/hr/positions')->assertStatus(403);
         $this->get('/dashboard/exec')->assertStatus(403);
 
         // 行政（HR专员）不持 hr.position.manage / announcement.manage，同样被挡
-        $this->actingAsDemo('admin-assistant');
+        $this->actingAsDemo('李娜');
         $this->get('/hr/positions')->assertStatus(403);
         $this->get('/announcements')->assertStatus(200);
 
         // 管理员不进业务驾驶舱（管理员只管运维）
-        $this->actingAsDemo('admin');
+        $this->actingAsDemo('张三');
         $this->get('/dashboard/exec')->assertStatus(403);
     }
 
@@ -119,7 +119,7 @@ class WorkspacePagesTest extends TestCase
     public function test_new_pages_render_without_errors(): void
     {
         \Illuminate\Support\Facades\Gate::before(fn () => true);
-        $this->actingAsDemo('admin');
+        $this->actingAsDemo('张三');
 
         foreach ([
             '/dashboard/exec',
@@ -150,7 +150,7 @@ class WorkspacePagesTest extends TestCase
     public function test_exec_dashboard_renders_readonly_cockpit(): void
     {
         \Illuminate\Support\Facades\Gate::before(fn () => true);
-        $this->actingAsDemo('admin');
+        $this->actingAsDemo('张三');
 
         $this->get('/dashboard/exec')
             ->assertStatus(200)
@@ -163,14 +163,14 @@ class WorkspacePagesTest extends TestCase
      */
     public function test_admin_back_office_pages_open_only_for_system_admin(): void
     {
-        $this->actingAsDemo('admin');
+        $this->actingAsDemo('张三');
 
         $this->get('/admin/departments')->assertStatus(200);
         $this->get('/admin/positions')->assertStatus(200);
         $this->get('/admin/permissions')->assertStatus(200);
         $this->get('/admin/ai-guide')->assertStatus(200);
 
-        $this->actingAsDemo('wh-keeper');
+        $this->actingAsDemo('王五');
         $this->get('/admin/departments')->assertStatus(403);
         $this->get('/admin/positions')->assertStatus(403);
         $this->get('/admin/permissions')->assertStatus(403);
@@ -182,7 +182,7 @@ class WorkspacePagesTest extends TestCase
      */
     public function test_issue_request_without_bom_is_auto_approved(): void
     {
-        $this->actingAsDemo('prod-supervisor');
+        $this->actingAsDemo('吴十');
 
         // bom_id = 0 表示该工单未挂 BOM（列 NOT NULL 无默认值，测试库也无 BOM 数据）
         $order = ProductionOrder::create([

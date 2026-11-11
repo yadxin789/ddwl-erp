@@ -20,7 +20,7 @@
             </div>
 
             <ul class="list-unstyled small text-muted mb-3">
-                <li>当前账号：{{ $currentUser ?? (auth()->user()->name ?? '未登录') }}</li>
+                <li>当前账号：{{ $currentUser ?? (auth()->user()->identity_label ?? '未登录') }}</li>
                 <li>当前岗位：{{ $positionName ?? '未绑定岗位' }}</li>
                 @isset($requiredPermission)
                     <li>所需权限：<code>{{ $requiredPermission }}</code></li>

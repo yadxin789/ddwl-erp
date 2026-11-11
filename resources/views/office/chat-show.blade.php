@@ -11,7 +11,7 @@
     <div class="card-body" style="height:360px;overflow-y:auto;">
         @forelse ($room->messages as $m)
         <div class="mb-2">
-            <span class="fw-semibold">{{ $m->sender->name ?? '系统' }}:</span>
+            <span class="fw-semibold">{{ $m->sender->identity_label ?? '系统' }}:</span>
             <span>{{ $m->content }}</span>
             <small class="text-muted d-block">{{ $m->created_at?->format('H:i') }}</small>
         </div>

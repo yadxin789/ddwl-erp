@@ -77,10 +77,11 @@
 
         <div class="demo-accounts p-3 mt-4">
             <div class="fw-semibold mb-2"><i class="fa-solid fa-circle-info me-1"></i>演示账号（密码均为 123456）</div>
-            <div>管理员：admin</div>
-            <div>仓库主管：wh-supervisor@demo.com</div>
-            <div>采购专员：purchase@demo.com</div>
-            <div>销售专员：sales@demo.com</div>
+            <div>系统管理员：张三</div>
+            <div>仓库主管：李四</div>
+            <div>采购专员：赵六</div>
+            <div>销售专员：钱七</div>
+            <div class="text-muted mt-1">其余岗位账号见《用户管理》列表。</div>
         </div>
     </div>
 </div>

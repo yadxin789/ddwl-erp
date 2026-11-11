@@ -28,7 +28,7 @@
                 <td>{{ \App\Support\MaskingService::phone($l->phone) }}</td>
                 <td>{{ $l->source ?? '-' }}</td>
                 <td><span class="badge bg-secondary text-dark">{{ \App\Enums\CrmLeadStatus::tryFrom($l->status)?->label() ?? $l->status }}</span></td>
-                <td>{{ $l->owner->name ?? '-' }}</td>
+                <td>{{ $l->owner->identity_label ?? '-' }}</td>
             </tr>
             @empty
             <tr><td colspan="7" class="text-center text-muted py-4">暂无线索</td></tr>

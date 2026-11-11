@@ -17,7 +17,7 @@ class BusinessQaTest extends TestCase
 
     public function test_sales_and_inventory_answers_are_grounded_in_erp_data(): void
     {
-        $sales = User::where('username', 'sales')->firstOrFail();
+        $sales = User::where('username', '钱七')->firstOrFail();
         $customer = Customer::where('customer_code', 'ACC-C01')->firstOrFail();
         // 事务内清掉演示订单，保证金额断言只受本用例数据影响（结束后回滚）
         SalesOrder::withoutGlobalScopes()->delete();
@@ -59,13 +59,13 @@ class BusinessQaTest extends TestCase
 
     public function test_approval_and_production_intents_are_supported(): void
     {
-        $keeper = User::where('username', 'wh-keeper')->firstOrFail();
+        $keeper = User::where('username', '王五')->firstOrFail();
         $approval = app(BusinessQaService::class)->answer('我有多少待审批？', $keeper);
         $this->assertSame('pending_approvals', $approval['intent']);
         $this->assertStringContainsString('待我审批', $approval['answer']);
         $this->assertStringContainsString('单待处理', $approval['answer']);
 
-        $operator = User::where('username', 'operator')->firstOrFail();
+        $operator = User::where('username', '蒋鹏')->firstOrFail();
         $production = app(BusinessQaService::class)->answer('生产工单进度怎么样？', $operator);
         $this->assertSame('production_progress', $production['intent']);
         $this->assertStringContainsString('生产工单进度', $production['answer']);
@@ -74,7 +74,7 @@ class BusinessQaTest extends TestCase
 
     public function test_business_qa_denies_module_without_permission_and_falls_back_for_unknown_intent(): void
     {
-        $keeper = User::where('username', 'wh-keeper')->firstOrFail();
+        $keeper = User::where('username', '王五')->firstOrFail();
         $result = app(BusinessQaService::class)->answer('本月销售额多少？', $keeper);
 
         $this->assertSame('denied', $result['intent']);

@@ -20,8 +20,8 @@ class TenantIsolationTest extends TestCase
         $a = Tenant::create(['code' => 'TNT-A', 'name' => '租户 A', 'status' => 'active']);
         $b = Tenant::create(['code' => 'TNT-B', 'name' => '租户 B', 'status' => 'active']);
 
-        $sales = User::where('username', 'sales')->firstOrFail();
-        $manager = User::where('username', 'sal-manager')->firstOrFail();
+        $sales = User::where('username', '钱七')->firstOrFail();
+        $manager = User::where('username', '罗娟')->firstOrFail();
         $sales->forceFill(['tenant_id' => $a->id])->save();
         $manager->forceFill(['tenant_id' => $b->id])->save();
 

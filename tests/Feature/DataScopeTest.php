@@ -27,16 +27,16 @@ class DataScopeTest extends TestCase
     {
         $service = app(DataScopeService::class);
 
-        $this->actingAsDemo('sales');              // 销售专员 → self
+        $this->actingAsDemo('钱七');              // 销售专员 → self
         $this->assertSame('self', $service->forCurrentUser());
 
-        $this->actingAsDemo('wh-supervisor');      // 仓库主管 → all
+        $this->actingAsDemo('李四');      // 仓库主管 → all
         $this->assertSame('all', $service->forCurrentUser());
 
-        $this->actingAsDemo('admin');              // 系统管理员 → none
+        $this->actingAsDemo('张三');              // 系统管理员 → none
         $this->assertSame('none', $service->forCurrentUser());
 
-        $this->actingAsDemo('iqc-inspector');      // IQC → department
+        $this->actingAsDemo('郑一');      // IQC → department
         $this->assertSame('department', $service->forCurrentUser());
     }
 
@@ -45,7 +45,7 @@ class DataScopeTest extends TestCase
         DB::beginTransaction();
 
         try {
-            $sales = $this->actingAsDemo('sales');
+            $sales = $this->actingAsDemo('钱七');
             $customerId = Customer::query()->value('id') ?? 0;
             $baseline = SalesOrder::withoutGlobalScope('data_scope')->count();
 
@@ -69,11 +69,11 @@ class DataScopeTest extends TestCase
             $this->assertSame($baseline + 1, SalesOrder::count());
 
             // all：仓库主管看到全部（含新建两单）
-            $this->actingAsDemo('wh-supervisor');
+            $this->actingAsDemo('李四');
             $this->assertSame($baseline + 2, SalesOrder::count());
 
             // none：管理员不看业务数据
-            $this->actingAsDemo('admin');
+            $this->actingAsDemo('张三');
             $this->assertSame(0, SalesOrder::count());
 
             $this->assertTrue($own->exists && $foreign->exists);
@@ -87,7 +87,7 @@ class DataScopeTest extends TestCase
         DB::beginTransaction();
 
         try {
-            $purchase = $this->actingAsDemo('purchase');   // 采购专员 → self
+            $purchase = $this->actingAsDemo('赵六');   // 采购专员 → self
             $this->assertSame('self', app(DataScopeService::class)->forCurrentUser());
 
             // 采购专员查采购单：不会出现他人的单（结果只可能是 0 或自己的单）
@@ -96,7 +96,7 @@ class DataScopeTest extends TestCase
                 \App\Models\Purchasing\PurchaseOrder::query()->where('buyer_id', '!=', $purchase->id)->count()
             );
 
-            $iqc = $this->actingAsDemo('iqc-inspector');   // IQC → department
+            $iqc = $this->actingAsDemo('郑一');   // IQC → department
             // 品质部无 department_id 列时退化：仍不会跨部门返回他人记录
             $this->assertSame('department', app(DataScopeService::class)->forCurrentUser());
         } finally {
@@ -112,7 +112,7 @@ class DataScopeTest extends TestCase
         DB::beginTransaction();
 
         try {
-            $operator = $this->actingAsDemo('operator');   // 作业员 → self
+            $operator = $this->actingAsDemo('蒋鹏');   // 作业员 → self
             $prodDept = (int) DB::table('departments')->where('dept_code', 'D-PROD')->value('id');
             $template = DB::table('production_orders')->first();
 
@@ -141,7 +141,7 @@ class DataScopeTest extends TestCase
             $this->assertSame(1, \App\Models\Production\ProductionOrder::count());
 
             // department：生产组长看整个生产部（含历史回填工单）
-            $this->actingAsDemo('prod-leader');
+            $this->actingAsDemo('冯军');
             $this->assertGreaterThanOrEqual(2, \App\Models\Production\ProductionOrder::count());
             $this->assertSame(
                 0,
@@ -149,7 +149,7 @@ class DataScopeTest extends TestCase
             );
 
             // none：管理员 0 行
-            $this->actingAsDemo('admin');
+            $this->actingAsDemo('张三');
             $this->assertSame(0, \App\Models\Production\ProductionOrder::count());
 
             $this->assertTrue($own->exists && $foreign->exists);
@@ -163,7 +163,7 @@ class DataScopeTest extends TestCase
         DB::beginTransaction();
 
         try {
-            $sales = $this->actingAsDemo('sales');        // self
+            $sales = $this->actingAsDemo('钱七');        // self
             $others = Customer::withoutGlobalScope('data_scope')->where('owner_id', '!=', $sales->id)->count();
             $mine = Customer::withoutGlobalScope('data_scope')->where('owner_id', $sales->id)->count();
 
@@ -174,16 +174,16 @@ class DataScopeTest extends TestCase
             );
 
             // 销售主管 all
-            $this->actingAsDemo('sal-manager');
+            $this->actingAsDemo('罗娟');
             $this->assertSame($mine + $others, Customer::count());
 
             // 供应商：采购专员只看自己的，采购主管看全部
-            $purchase = $this->actingAsDemo('purchase');
+            $purchase = $this->actingAsDemo('赵六');
             $this->assertSame(
                 0,
                 \App\Models\MasterData\Supplier::query()->where('owner_id', '!=', $purchase->id)->count()
             );
-            $this->actingAsDemo('pur-manager');
+            $this->actingAsDemo('徐涛');
             $this->assertGreaterThanOrEqual(1, \App\Models\MasterData\Supplier::count());
         } finally {
             DB::rollBack();
@@ -226,7 +226,7 @@ class DataScopeTest extends TestCase
             ]);
 
             // 仓管（self）：只能看到仓储部名下仓库的库存
-            $this->actingAsDemo('wh-keeper');
+            $this->actingAsDemo('王五');
             $this->assertSame(
                 0,
                 \App\Models\Inventory\InventoryStock::query()->where('warehouse_id', $whB->id)->count()
@@ -234,7 +234,7 @@ class DataScopeTest extends TestCase
             $this->assertGreaterThanOrEqual(1, \App\Models\Inventory\InventoryStock::query()->where('warehouse_id', $whA->id)->count());
 
             // 仓库主管（all）：两仓都能看到
-            $this->actingAsDemo('wh-supervisor');
+            $this->actingAsDemo('李四');
             $this->assertSame(1, \App\Models\Inventory\InventoryStock::query()->where('warehouse_id', $whB->id)->count());
         } finally {
             DB::rollBack();
@@ -246,7 +246,7 @@ class DataScopeTest extends TestCase
         DB::beginTransaction();
 
         try {
-            $sales = $this->actingAsDemo('sales');
+            $sales = $this->actingAsDemo('钱七');
             $customerId = (int) Customer::withoutGlobalScope('data_scope')->value('id');
 
             \App\Models\Finance\CustomerInvoice::create([
@@ -264,11 +264,11 @@ class DataScopeTest extends TestCase
             $this->assertSame(100.0, (float) \App\Models\Finance\CustomerInvoice::sum('amount'));
 
             // 会计 all
-            $this->actingAsDemo('accountant');
+            $this->actingAsDemo('陈静');
             $this->assertSame(2, \App\Models\Finance\CustomerInvoice::count());
 
             // 应付账单同理
-            $purchase = $this->actingAsDemo('purchase');
+            $purchase = $this->actingAsDemo('赵六');
             $supplierId = (int) \App\Models\MasterData\Supplier::withoutGlobalScope('data_scope')->value('id');
             \App\Models\Finance\SupplierBill::create([
                 'bill_no' => 'T-BILL-OWN-' . uniqid(), 'supplier_id' => $supplierId,
@@ -293,7 +293,7 @@ class DataScopeTest extends TestCase
         DB::beginTransaction();
 
         try {
-            $sales = $this->actingAsDemo('sales');
+            $sales = $this->actingAsDemo('钱七');
             $customerId = (int) Customer::withoutGlobalScope('data_scope')->value('id');
 
             \App\Models\Finance\CustomerInvoice::create([
@@ -315,7 +315,7 @@ class DataScopeTest extends TestCase
             $this->assertSame((float) \App\Models\Finance\CustomerInvoice::sum('amount'), (float) $data);
 
             // 总经理（all）：两张都计入
-            $this->actingAsDemo('gm');
+            $this->actingAsDemo('高远');
             $gm = $this->get('/reports/finance')->assertStatus(200)->viewData('invoiced');
             $this->assertSame(1000.0, (float) $gm);
         } finally {
@@ -326,22 +326,22 @@ class DataScopeTest extends TestCase
     public function test_report_permissions_are_split_by_business_domain(): void
     {
         // 仓管无任何报表权限
-        $this->actingAsDemo('wh-keeper');
+        $this->actingAsDemo('王五');
         $this->get('/reports/sales')->assertStatus(403);
         $this->get('/reports/finance')->assertStatus(403);
 
         // 采购主管只有供应商绩效，看不了财务报表
-        $this->actingAsDemo('pur-manager');
+        $this->actingAsDemo('徐涛');
         $this->get('/reports/supplier')->assertStatus(200);
         $this->get('/reports/finance')->assertStatus(403);
 
         // 会计只有财务报表
-        $this->actingAsDemo('accountant');
+        $this->actingAsDemo('陈静');
         $this->get('/reports/finance')->assertStatus(200);
         $this->get('/reports/sales')->assertStatus(403);
 
         // 总经理四张全通
-        $this->actingAsDemo('gm');
+        $this->actingAsDemo('高远');
         foreach (['/reports/sales', '/reports/quality', '/reports/supplier', '/reports/finance'] as $url) {
             $this->get($url)->assertStatus(200);
         }
@@ -359,13 +359,13 @@ class DataScopeTest extends TestCase
             protected static ?string $dataScopeWarehouseColumn = null;
         };
 
-        $this->actingAsDemo('sales');       // self
+        $this->actingAsDemo('钱七');       // self
         $this->assertSame(0, $stub->newQuery()->count());
 
-        $this->actingAsDemo('wh-supervisor'); // all → 不过滤
+        $this->actingAsDemo('李四'); // all → 不过滤
         $this->assertGreaterThan(0, $stub->newQuery()->count());
 
-        $this->actingAsDemo('admin');        // none → 0 行
+        $this->actingAsDemo('张三');        // none → 0 行
         $this->assertSame(0, $stub->newQuery()->count());
     }
 }

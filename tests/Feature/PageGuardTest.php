@@ -25,7 +25,7 @@ class PageGuardTest extends TestCase
 
     public function test_warehouse_keeper_cannot_open_finance_pages(): void
     {
-        $this->actingAsDemo('wh-keeper');
+        $this->actingAsDemo('王五');
 
         $response = $this->get('/finance/invoices');
 
@@ -39,7 +39,7 @@ class PageGuardTest extends TestCase
      */
     public function test_warehouse_keeper_cannot_open_sales_orders_after_g1(): void
     {
-        $this->actingAsDemo('wh-keeper');
+        $this->actingAsDemo('王五');
 
         $this->get('/sales/orders')->assertStatus(403);
         $this->get('/shipping')->assertStatus(200);
@@ -47,7 +47,7 @@ class PageGuardTest extends TestCase
 
     public function test_system_admin_cannot_open_business_pages(): void
     {
-        $this->actingAsDemo('admin');
+        $this->actingAsDemo('张三');
 
         $this->get('/sales/orders')->assertStatus(403);
         $this->get('/production/orders')->assertStatus(403);
@@ -55,13 +55,13 @@ class PageGuardTest extends TestCase
 
     public function test_unauthorized_access_is_audited(): void
     {
-        $this->actingAsDemo('wh-keeper');
+        $this->actingAsDemo('王五');
 
         $this->get('/finance/invoices')->assertStatus(403);
 
         $this->assertTrue(
             SecurityEvent::where('event_type', 'unauthorized_access')
-                ->where('user_id', User::where('username', 'wh-keeper')->value('id'))
+                ->where('user_id', User::where('username', '王五')->value('id'))
                 ->exists(),
             '越权访问未写入 security_events'
         );
@@ -69,14 +69,14 @@ class PageGuardTest extends TestCase
 
     public function test_warehouse_keeper_can_open_stocktake_page(): void
     {
-        $this->actingAsDemo('wh-keeper');
+        $this->actingAsDemo('王五');
 
         $this->get('/production/stocktakes')->assertStatus(200);
     }
 
     public function test_admin_sidebar_renders_position_menu_with_shared_group(): void
     {
-        $this->actingAsDemo('admin');
+        $this->actingAsDemo('张三');
 
         $response = $this->get('/');
 
@@ -87,7 +87,7 @@ class PageGuardTest extends TestCase
 
     public function test_iqc_sidebar_hides_other_positions_menus(): void
     {
-        $this->actingAsDemo('iqc-inspector');
+        $this->actingAsDemo('郑一');
 
         $response = $this->get('/');
 

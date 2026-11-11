@@ -56,9 +56,9 @@ class RndController extends Controller
             }
         });
 
-        $users = User::where('status', 1)->orderBy('username')->get(['id', 'username', 'department_id']);
+        $users = User::where('status', 1)->orderBy('name')->get(['id', 'name', 'username', 'department_id']);
         $usersByDept = $users->groupBy('department_id')
-            ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'username' => $u->username])->values()->all())
+            ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'label' => $u->identity_label])->values()->all())
             ->all();
 
         $defaultExecutors = [];
@@ -156,9 +156,9 @@ class RndController extends Controller
         $project->load(['creator', 'tasks.taskType', 'tasks.executor', 'documents.file', 'documents.uploader']);
         $taskTypes = RndTaskType::with('department')->where('status', 1)->orderBy('sort_order')->get();
 
-        $users = User::where('status', 1)->orderBy('username')->get(['id', 'username', 'department_id']);
+        $users = User::where('status', 1)->orderBy('name')->get(['id', 'name', 'username', 'department_id']);
         $usersByDept = $users->groupBy('department_id')
-            ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'username' => $u->username])->values()->all())
+            ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'label' => $u->identity_label])->values()->all())
             ->all();
 
         $defaultExecutors = [];

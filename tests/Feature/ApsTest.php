@@ -61,7 +61,7 @@ class ApsTest extends TestCase
             ]);
         }
 
-        $user = User::where('username', 'prod-supervisor')->firstOrFail();
+        $user = User::where('username', '吴十')->firstOrFail();
         $response = $this->actingAs($user)->post(route('production.aps.schedule'), [
             'horizon_start' => $start,
             'horizon_end' => $end,
@@ -103,7 +103,7 @@ class ApsTest extends TestCase
     {
         ProductionOrder::withoutGlobalScopes()->update(['routing_id' => null]);
 
-        $user = User::where('username', 'prod-supervisor')->firstOrFail();
+        $user = User::where('username', '吴十')->firstOrFail();
         $response = $this->actingAs($user)->post(route('production.aps.schedule'), [
             'horizon_start' => today()->toDateString(),
             'horizon_end' => today()->addDays(2)->toDateString(),

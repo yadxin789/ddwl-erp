@@ -22,7 +22,7 @@
                 <tr>
                     <td>{{ $ev->id }}</td>
                     <td><span class="badge bg-light text-dark">{{ $ev->event_type }}</span></td>
-                    <td>{{ $ev->user->name ?? '系统' }}</td>
+                    <td>{{ $ev->user->identity_label ?? '系统' }}</td>
                     <td>
                         @php $lv = ['low'=>'secondary','medium'=>'warning','high'=>'danger','critical'=>'danger'][$ev->level] ?? 'secondary'; @endphp
                         <span class="badge bg-{{ $lv }}">{{ $ev->level }}</span>

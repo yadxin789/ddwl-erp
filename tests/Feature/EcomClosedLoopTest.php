@@ -157,7 +157,7 @@ class EcomClosedLoopTest extends TestCase
 
     public function test_ecom_orders_page_renders_closed_loop_sections(): void
     {
-        $operator = User::where('username', 'ecom-operator')->firstOrFail();
+        $operator = User::where('username', '魏晨')->firstOrFail();
         $this->actingAs($operator)->get(route('ecom.orders'))
             ->assertOk()
             ->assertSee('发货回写')

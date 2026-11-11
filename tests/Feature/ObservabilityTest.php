@@ -40,7 +40,7 @@ class ObservabilityTest extends TestCase
                 ]);
             }
 
-            $admin = User::where('username', 'admin')->firstOrFail();
+            $admin = User::where('username', '张三')->firstOrFail();
             $response = $this->actingAs($admin)->get(route('system.observability'));
             $response->assertOk();
             $response->assertSee('同步失败与重放');

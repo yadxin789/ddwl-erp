@@ -34,7 +34,7 @@
                     @php $res = \App\Enums\InspectionResult::tryFrom($r->result); @endphp
                     <span class="badge bg-{{ $r->result=='accepted'?'success':($r->result=='rejected'?'danger':'secondary') }}">{{ $res?->label() ?? $r->result }}</span>
                 </td>
-                <td>{{ $r->inspector->name ?? '-' }}</td>
+                <td>{{ $r->inspector->identity_label ?? '-' }}</td>
                 <td class="small">
                     @if ($r->ref_type === 'goods_receipt' && $r->ref_id)
                         <a href="{{ route('purchase.receipts.show', $r->ref_id) }}" class="font-monospace">GR#{{ $r->ref_id }}</a>

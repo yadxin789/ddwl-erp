@@ -39,8 +39,8 @@ class RndPlmTest extends TestCase
         parent::setUp();
         DB::beginTransaction();
 
-        $this->engId = (int) User::where('username', 'eng-sw')->value('id');
-        $this->managerId = (int) User::where('username', 'rnd-manager')->value('id');
+        $this->engId = (int) User::where('username', '唐斌')->value('id');
+        $this->managerId = (int) User::where('username', '王明')->value('id');
         $this->materialId = (int) Material::where('material_code', 'EL000001')->value('id');
         $this->taskTypeId = (int) (RndTaskType::query()->value('id') ?? 0);
         if (! $this->taskTypeId) {
@@ -126,8 +126,8 @@ class RndPlmTest extends TestCase
 
     public function test_ecr_full_form_impact_and_eco_number(): void
     {
-        $manager = User::where('username', 'rnd-manager')->firstOrFail();
-        $applicant = User::where('username', 'eng-sw')->firstOrFail();
+        $manager = User::where('username', '王明')->firstOrFail();
+        $applicant = User::where('username', '唐斌')->firstOrFail();
         $this->actingAs($applicant);
 
         ProductionOrder::withoutGlobalScopes()->create([
@@ -191,7 +191,7 @@ class RndPlmTest extends TestCase
     public function test_stage_gate_requires_baseline_and_blocks_pending_ecr(): void
     {
         $svc = app(RndProjectService::class);
-        $this->actingAs(User::where('username', 'eng-sw')->firstOrFail());
+        $this->actingAs(User::where('username', '唐斌')->firstOrFail());
 
         // 必须逐级：立项不能直接跳试产
         try {
@@ -234,7 +234,7 @@ class RndPlmTest extends TestCase
         }
 
         // 研发经理批准 → ECR 生成 V2，旧版本 superseded，量产门放行
-        $this->actingAs(User::where('username', 'rnd-manager')->firstOrFail());
+        $this->actingAs(User::where('username', '王明')->firstOrFail());
         app(ApprovalService::class)->decide(
             (int) \App\Models\Approval\ApprovalInstance::where('business_type', 'ecr.change')->where('business_id', $ecr->id)->value('id'),
             true,
@@ -249,7 +249,7 @@ class RndPlmTest extends TestCase
         $this->assertStringContainsString('-V2', $newBom->bom_code, '新版本编码带版本后缀（bom_code 全库唯一）');
         $this->assertSame('superseded', BomHeader::findOrFail($this->bomId)->status);
 
-        $this->actingAs(User::where('username', 'eng-sw')->firstOrFail());
+        $this->actingAs(User::where('username', '唐斌')->firstOrFail());
         $svc->setStage($this->projectId, 'mass_production');
         $this->assertSame('mass_production', RndProject::withoutGlobalScopes()->find($this->projectId)->stage);
     }
@@ -273,7 +273,7 @@ class RndPlmTest extends TestCase
     public function test_task_lifecycle_and_extension_resets_overdue(): void
     {
         $svc = app(RndProjectService::class);
-        $this->actingAs(User::where('username', 'eng-sw')->firstOrFail());
+        $this->actingAs(User::where('username', '唐斌')->firstOrFail());
 
         $task = $this->makeTask();
         $svc->startTask($task->id);
@@ -292,7 +292,7 @@ class RndPlmTest extends TestCase
         $svc->submitTask($task->id);
         $this->assertSame('submitted', $task->fresh()->status);
 
-        $this->actingAs(User::where('username', 'rnd-manager')->firstOrFail());
+        $this->actingAs(User::where('username', '王明')->firstOrFail());
         $svc->decideTask($task->id, true, '通过');
         $this->assertSame('approved', $task->fresh()->status);
 

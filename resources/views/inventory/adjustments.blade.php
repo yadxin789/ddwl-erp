@@ -72,7 +72,7 @@
                                 {{ $adj->amount === null ? '无法计价（强制审批）' : number_format((float) $adj->amount, 2) }}
                                 <div class="small text-muted">阈值 {{ number_format((float) $adj->threshold, 2) }}</div>
                             </td>
-                            <td class="small">{{ $adj->requester->name ?? '-' }}</td>
+                            <td class="small">{{ $adj->requester->identity_label ?? '-' }}</td>
                             <td class="small text-muted">{{ $adj->reason }}</td>
                             <td>
                                 @can('inventory.adjust.approve')

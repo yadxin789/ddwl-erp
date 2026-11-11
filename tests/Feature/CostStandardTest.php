@@ -105,15 +105,15 @@ class CostStandardTest extends TestCase
 
     public function test_business_role_forbidden_and_accountant_allowed_on_cost_page(): void
     {
-        $this->actingAsDemo('sales');
+        $this->actingAsDemo('钱七');
         $this->get(route('finance.standard-costs'))->assertStatus(403);
 
-        $this->actingAsDemo('accountant');
+        $this->actingAsDemo('陈静');
         $this->get(route('finance.standard-costs'))->assertStatus(200);
         $this->get(route('finance.cost-variance'))->assertStatus(200);
 
         // 总经理只读查看（view，不含 manage）
-        $this->actingAsDemo('gm');
+        $this->actingAsDemo('高远');
         $this->get(route('finance.cost-variance'))->assertStatus(200);
     }
 
@@ -121,7 +121,7 @@ class CostStandardTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $this->actingAsDemo('wh-receiver');
+            $this->actingAsDemo('卢伟');
             [$material, $stock] = $this->makeMaterialWithStock('CV', 0);
             $materialId = $material->id;
             $supplierId = (int) DB::table('suppliers')->value('id');
@@ -131,7 +131,7 @@ class CostStandardTest extends TestCase
             $poId = (int) DB::table('purchase_orders')->insertGetId([
                 'po_no' => 'PO-CV' . substr(uniqid(), -6),
                 'supplier_id' => $supplierId,
-                'buyer_id' => (int) DB::table('users')->where('username', 'purchase')->value('id'),
+                'buyer_id' => (int) DB::table('users')->where('username', '赵六')->value('id'),
                 'order_date' => now()->toDateString(),
                 'status' => 'confirmed',
                 'total_amount' => 120,
@@ -173,7 +173,7 @@ class CostStandardTest extends TestCase
     {
         DB::beginTransaction();
         try {
-            $this->actingAsDemo('sales');
+            $this->actingAsDemo('钱七');
             [$material, $stock] = $this->makeMaterialWithStock('SH', 10);
             app(StandardCostService::class)->setVersion($material->id, 10.0, '2026-01-01', null, 'manual');
 
@@ -185,7 +185,7 @@ class CostStandardTest extends TestCase
                 'status' => 'confirmed',
                 'total_amount' => 200,
                 'shipped_qty' => 0,
-                'salesperson_id' => (int) DB::table('users')->where('username', 'sales')->value('id'),
+                'salesperson_id' => (int) DB::table('users')->where('username', '钱七')->value('id'),
             ]);
             $line = SalesOrderLine::create([
                 'order_id' => $order->id,

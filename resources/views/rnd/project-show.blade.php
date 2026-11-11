@@ -87,8 +87,8 @@
                             <div class="small text-muted">{{ $t->taskType->name }}</div>
                         @endif
                     </td>
-                    <td>{{ $t->executor->username ?? '-' }}</td>
-                    <td>{{ $t->auditor->username ?? '-' }}</td>
+                    <td>{{ $t->executor->identity_label ?? '-' }}</td>
+                    <td>{{ $t->auditor->identity_label ?? '-' }}</td>
                     <td>{{ $t->end_date }}@if($t->is_overdue) <span class="badge bg-danger">逾期</span> @endif</td>
                     <td>{{ $t->status }}</td>
                     <td>
@@ -248,7 +248,7 @@
                             <span class="text-muted">-</span>
                         @endif
                     </td>
-                    <td>{{ $e->applicant->name ?? '-' }}</td>
+                    <td>{{ $e->applicant->identity_label ?? '-' }}</td>
                     <td><span class="badge bg-{{ $e->status === 'approved' ? 'success' : ($e->status === 'rejected' ? 'danger' : 'warning text-dark') }}">{{ $e->status }}</span></td>
                     <td>
                         @if ($e->eco_no)
@@ -288,7 +288,7 @@
             return;
         }
         list.forEach(function (user) {
-            select.appendChild(new Option(user.username, user.id));
+            select.appendChild(new Option(user.label, user.id));
         });
         select.value = selectedId && list.some(function (u) { return String(u.id) === String(selectedId); })
             ? selectedId

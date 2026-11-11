@@ -60,11 +60,11 @@ class BusinessChainTest extends TestCase
 
     public function test_three_chains_close_the_loop(): void
     {
-        $cashier = User::where('username', 'cashier')->firstOrFail();
+        $cashier = User::where('username', '刘芳')->firstOrFail();
         $cashierId = (int) $cashier->id;
 
         /* ---------- 段一：计划 → 完工入库 ---------- */
-        $this->actingAs(User::where('username', 'prod-supervisor')->firstOrFail());
+        $this->actingAs(User::where('username', '吴十')->firstOrFail());
         $workOrder = ProductionOrder::where('order_no', AcceptanceSeeder::PRODUCTION_ORDER_NO)->firstOrFail();
         $production = app(ProductionOrderService::class);
 
@@ -85,7 +85,7 @@ class BusinessChainTest extends TestCase
         $this->assertSame(1, $productionReceipts, '工单完工入库应恰好 1 笔流水');
 
         /* ---------- 段二：订单 → 收款（AR=0） ---------- */
-        $this->actingAs(User::where('username', 'sales')->firstOrFail());
+        $this->actingAs(User::where('username', '钱七')->firstOrFail());
         $order = SalesOrder::where('order_no', AcceptanceSeeder::SALES_ORDER_NO)->firstOrFail();
         $sales = app(SalesOrderService::class);
         $sales->confirm($order->id);
@@ -127,7 +127,7 @@ class BusinessChainTest extends TestCase
         $this->assertSame('paid', $invoice->fresh()->status, '收款 500 后发票应结清');
 
         /* ---------- 段三：采购 → 付款（应付结清） ---------- */
-        $this->actingAs(User::where('username', 'purchase')->firstOrFail());
+        $this->actingAs(User::where('username', '赵六')->firstOrFail());
         $po = PurchaseOrder::withoutGlobalScopes()->where('po_no', AcceptanceSeeder::PURCHASE_ORDER_NO)->firstOrFail();
         $purchase = app(PurchaseOrderService::class);
         $purchase->confirm($po->id);

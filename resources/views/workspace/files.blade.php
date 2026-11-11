@@ -25,7 +25,7 @@
                                 @endif
                             </td>
                             <td class="text-end small text-muted">{{ number_format($file->file_size / 1024, 1) }} KB</td>
-                            <td class="small">{{ $file->uploader->name ?? '-' }}</td>
+                            <td class="small">{{ $file->uploader->identity_label ?? '-' }}</td>
                             <td class="small text-muted">{{ $file->created_at?->format('Y-m-d H:i') }}</td>
                         </tr>
                     @empty

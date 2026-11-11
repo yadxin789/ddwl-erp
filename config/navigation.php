@@ -382,7 +382,7 @@ return [
      *
      * 【倒计时 · Q5 / P2-02】2026-12-31 正式停用，2026-12-17 完成回收演练；
      * 停用后本段整段删除，`erp:legacy-role:audit --strict` 必须报 0 条非白名单绑定。
-     * 白名单：admin 保留 system_admin 作为系统账号留档（见 legacy_role_whitelist）。
+     * 白名单：张三 保留 system_admin 作为系统账号留档（见 legacy_role_whitelist）。
      */
     'legacy_role_map' => [
         'system_admin' => 'role_sys_admin',
@@ -400,7 +400,7 @@ return [
 
     /** 白名单：账号 => 允许保留的旧角色（留档，不计入"待回收"） */
     'legacy_role_whitelist' => [
-        'admin' => ['system_admin'],
+        '张三' => ['system_admin'],
     ],
 
     'menu_items' => [

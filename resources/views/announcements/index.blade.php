@@ -41,7 +41,7 @@
                     </div>
                     <div class="small text-muted">
                         {{ $item->published_at?->format('Y-m-d H:i') ?? '-' }}
-                        <span class="ms-2">{{ $item->publisher->name ?? '-' }}</span>
+                        <span class="ms-2">{{ $item->publisher->identity_label ?? '-' }}</span>
                         @can('announcement.manage')
                             <form method="POST" action="{{ route('announcement.toggle', $item) }}" class="d-inline">
                                 @csrf

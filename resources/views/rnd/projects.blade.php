@@ -20,7 +20,7 @@
                     <td class="font-monospace">{{ $p->project_code }}</td>
                     <td>{{ $p->project_name }}</td>
                     <td>{{ $p->product_model ?? '-' }}</td>
-                    <td>{{ $p->creator->name ?? '-' }}</td>
+                    <td>{{ $p->creator->identity_label ?? '-' }}</td>
                     <td>
                         <div class="progress" style="height:18px;width:100px;">
                             <div class="progress-bar" style="width:{{ $p->progress }}%">{{ $p->progress }}%</div>

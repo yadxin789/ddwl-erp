@@ -36,7 +36,7 @@
                 </td>
                 <td class="small">{{ $doc->version_no }}</td>
                 <td class="small">{{ $doc->audit_status }}</td>
-                <td class="small">{{ $doc->uploader->name ?? '-' }}</td>
+                <td class="small">{{ $doc->uploader->identity_label ?? '-' }}</td>
             </tr>
         @empty
             <tr><td colspan="6" class="text-center text-muted py-4">暂无{{ $keyword }}图档</td></tr>

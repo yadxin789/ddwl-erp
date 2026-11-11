@@ -13,7 +13,7 @@
     <div class="card-body">
         <form class="row g-2 mb-3" method="GET">
             <div class="col-md-4">
-                <input type="text" name="keyword" class="form-control form-control-sm" placeholder="用户名/姓名/邮箱" value="{{ request('keyword') }}">
+                <input type="text" name="keyword" class="form-control form-control-sm" placeholder="登录账号/用户名/邮箱" value="{{ request('keyword') }}">
             </div>
             <div class="col-md-2">
                 <button class="btn btn-outline-secondary btn-sm w-100">查询</button>
@@ -22,7 +22,7 @@
         <div class="table-responsive">
             <table class="table table-hover align-middle">
                 <thead class="table-light">
-                    <tr><th>用户名</th><th>姓名</th><th>邮箱</th><th>部门/岗位</th><th>角色</th><th>状态</th><th>最后登录</th><th>操作</th></tr>
+                    <tr><th>登录账号</th><th>用户名（姓名）</th><th>邮箱</th><th>部门/岗位</th><th>角色</th><th>状态</th><th>最后登录</th><th>操作</th></tr>
                 </thead>
                 <tbody>
                     @forelse ($users as $user)

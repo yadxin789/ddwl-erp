@@ -60,7 +60,7 @@ class InventoryAdjustTest extends TestCase
 
     public function test_warehouse_keeper_cannot_approve_via_http(): void
     {
-        $this->actingAsDemo('wh-keeper');
+        $this->actingAsDemo('王五');
 
         $this->get('/inventory/adjustments')->assertStatus(200);
 
@@ -71,7 +71,7 @@ class InventoryAdjustTest extends TestCase
 
     public function test_supervisor_sees_approval_actions_on_page(): void
     {
-        $this->actingAsDemo('wh-supervisor');
+        $this->actingAsDemo('李四');
 
         $this->get('/inventory/adjustments')
             ->assertStatus(200)
@@ -141,7 +141,7 @@ class InventoryAdjustTest extends TestCase
             ]);
 
             // 主管批准 → 生效
-            $approver = User::where('username', 'wh-supervisor')->firstOrFail();
+            $approver = User::where('username', '李四')->firstOrFail();
             $approved = $service->approve($adj->id, $approver->id, '同意调整');
 
             $this->assertSame('approved', $approved->status);

@@ -28,7 +28,7 @@ class PermissionGranularityTest extends TestCase
     public function test_quality_pages_are_gated_one_by_one(): void
     {
         // 仓管：有检验记录权限，没有检验模板/缺陷代码页权限
-        $keeper = User::where('username', 'wh-keeper')->firstOrFail();
+        $keeper = User::where('username', '王五')->firstOrFail();
         $this->assertTrue($keeper->hasPermissionTo('quality.inspection.view'));
         $this->assertFalse($keeper->hasPermissionTo('quality.template.view'));
 
@@ -37,7 +37,7 @@ class PermissionGranularityTest extends TestCase
         $this->actingAs($keeper)->get('/quality/inspections')->assertStatus(200);
 
         // 品质主管：三页都能进
-        $qc = User::where('username', 'quality')->firstOrFail();
+        $qc = User::where('username', '周九')->firstOrFail();
         $this->actingAs($qc)->get('/quality/templates')->assertStatus(200);
         $this->actingAs($qc)->get('/quality/defects')->assertStatus(200);
         $this->actingAs($qc)->get('/quality/inspections')->assertStatus(200);
@@ -45,12 +45,12 @@ class PermissionGranularityTest extends TestCase
 
     public function test_material_list_permission_gates_material_page(): void
     {
-        $engineer = User::where('username', 'engineer')->firstOrFail();
+        $engineer = User::where('username', '孙八')->firstOrFail();
         $this->assertTrue($engineer->hasPermissionTo('material.list'));
         $this->actingAs($engineer)->get('/materials')->assertStatus(200);
 
         // 总经理没有物料页权限，但业务角色仍可用 material.read 做引用读取（这里只断言页面被拒）
-        $gm = User::where('username', 'gm')->firstOrFail();
+        $gm = User::where('username', '高远')->firstOrFail();
         $this->assertFalse($gm->hasPermissionTo('material.list'));
         $this->actingAs($gm)->get('/materials')->assertStatus(403);
     }
