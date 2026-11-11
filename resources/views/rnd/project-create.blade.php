@@ -132,13 +132,13 @@
                     </thead>
                     <tbody id="taskBody">
                     @foreach($taskTypes as $index => $type)
-                        <tr class="task-row task-row-base {{ $type->is_required ? '' : 'table-secondary' }}" data-dept-id="{{ $type->department_id }}" data-task-type-id="{{ $type->id }}" data-task-type-name="{{ $type->name }}" data-required="{{ $type->is_required ? 1 : 0 }}">
+                        <tr class="task-row task-row-base" data-dept-id="{{ $type->department_id }}" data-task-type-id="{{ $type->id }}" data-task-type-name="{{ $type->name }}" data-required="{{ $type->is_required ? 1 : 0 }}">
                             <td>
                                 {{ $type->name }}
                                 @if ($type->is_required)
                                     <span class="badge bg-danger-subtle text-danger ms-1">必选</span>
                                 @else
-                                    <span class="badge bg-secondary-subtle text-secondary ms-1">可选</span>
+                                    <span class="badge bg-info-subtle text-info ms-1">可选</span>
                                 @endif
                                 <input type="hidden" name="tasks[{{ $index }}][task_type_id]" value="{{ $type->id }}">
                             </td>
