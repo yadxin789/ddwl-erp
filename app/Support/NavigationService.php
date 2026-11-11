@@ -145,6 +145,13 @@ class NavigationService
             return null;   // 权限不满足：不渲染（不灰显）
         }
 
+        // 以路由自身的 permission 中间件为最终门槛：菜单展示条件必须覆盖路由全部要求，
+        // 否则用户会看到一个点进去就 403 的入口。菜单配置只作业务描述，路由才是事实源。
+        $routePermissions = $this->routePermissions($route);
+        if ($routePermissions && ! $this->allowsAll($user, $routePermissions)) {
+            return null;
+        }
+
         return [
             'name' => $name,
             'route' => $routeName,
@@ -199,6 +206,64 @@ class NavigationService
             ->whereIn('status', ['submitted', 'overdue'])
             ->whereHas('project', fn ($q) => $q->withoutGlobalScope('data_scope')->where('status', '!=', 'suspended'))
             ->count();
+    }
+
+    /**
+     * 供页面内的"进入/详情"链接复用：按目标路由的 permission 中间件判断能否打开，
+     * 无权限时不渲染链接，避免页面里再出现点进去 403 的入口。
+     */
+    public function canOpenRoute(?Authenticatable $user, string $routeName): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        $route = Route::getRoutes()->getByName($routeName);
+        if (! $route) {
+            return false;
+        }
+
+        $requirements = $this->routePermissions($route);
+
+        return ! $requirements || $this->allowsAll($user, $requirements);
+    }
+
+    /**
+     * 路由上的权限要求（permission:a|b 视为“a 或 b 任一即可”，多条中间件为“全部满足”）。
+     *
+     * @return array<int, array<int, string>>
+     */
+    private function routePermissions(mixed $route): array
+    {
+        if (! $route) {
+            return [];
+        }
+
+        $requirements = [];
+        foreach ($route->gatherMiddleware() as $middleware) {
+            if (! is_string($middleware) || ! str_starts_with($middleware, 'permission:')) {
+                continue;
+            }
+
+            $names = array_values(array_filter(array_map('trim', explode('|', substr($middleware, 11)))));
+            if ($names) {
+                $requirements[] = $names;
+            }
+        }
+
+        return $requirements;
+    }
+
+    /** 每条路由权限要求都必须满足（组内任一权限满足即可） */
+    private function allowsAll(Authenticatable $user, array $requirements): bool
+    {
+        foreach ($requirements as $permissionGroup) {
+            if (! $this->allows($user, $permissionGroup)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

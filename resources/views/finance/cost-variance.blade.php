@@ -6,7 +6,9 @@
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span>成本差异分析（标准成本口径）</span>
-        <a href="{{ route('finance.standard-costs') }}" class="btn btn-sm btn-outline-secondary">标准成本维护</a>
+        @if (app(\App\Support\NavigationService::class)->canOpenRoute(auth()->user(), 'finance.standard-costs'))
+            <a href="{{ route('finance.standard-costs') }}" class="btn btn-sm btn-outline-secondary">标准成本维护</a>
+        @endif
     </div>
     <div class="card-body">
         <form method="GET" action="{{ route('finance.cost-variance') }}" class="row g-2 align-items-end mb-3">

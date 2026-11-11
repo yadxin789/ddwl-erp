@@ -6,7 +6,9 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between">
         <span>采购申请单</span>
-        <a href="{{ route('purchase.requisitions.create') }}" class="btn btn-primary btn-sm">新建申请</a>
+        @if (app(\App\Support\NavigationService::class)->canOpenRoute(auth()->user(), 'purchase.requisitions.create'))
+            <a href="{{ route('purchase.requisitions.create') }}" class="btn btn-primary btn-sm">新建申请</a>
+        @endif
     </div>
     <table class="table table-hover align-middle mb-0">
         <thead class="table-light"><tr><th>申请号</th><th>标题</th><th>申请人</th><th>需求日期</th><th>状态</th><th>创建时间</th></tr></thead>

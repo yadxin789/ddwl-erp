@@ -105,7 +105,9 @@ class DashboardService
             $cards[] = $definition + [
                 'key' => $key,
                 'value' => ($this->resolvers[$key])(),
-                'url' => (isset($definition['route']) && \Illuminate\Support\Facades\Route::has($definition['route']))
+                'url' => (isset($definition['route'])
+                    && \Illuminate\Support\Facades\Route::has($definition['route'])
+                    && $this->navigation->canOpenRoute(auth()->user(), $definition['route']))
                     ? route($definition['route'])
                     : null,
             ];
@@ -148,7 +150,9 @@ class DashboardService
             $cards[] = $definition + [
                 'key' => $key,
                 'value' => $value,
-                'url' => (isset($definition['route']) && \Illuminate\Support\Facades\Route::has($definition['route']))
+                'url' => (isset($definition['route'])
+                    && \Illuminate\Support\Facades\Route::has($definition['route'])
+                    && $this->navigation->canOpenRoute(auth()->user(), $definition['route']))
                     ? route($definition['route'])
                     : null,
             ];

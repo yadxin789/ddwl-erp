@@ -64,8 +64,12 @@
                         </form>
                     </td>
                     <td>
-                        @if ($domain->route_name && \Illuminate\Support\Facades\Route::has($domain->route_name))
+                        @if ($domain->route_name
+                            && \Illuminate\Support\Facades\Route::has($domain->route_name)
+                            && app(\App\Support\NavigationService::class)->canOpenRoute(auth()->user(), $domain->route_name))
                             <a href="{{ route($domain->route_name) }}" class="btn btn-sm btn-outline-primary">进入</a>
+                        @elseif ($domain->route_name && \Illuminate\Support\Facades\Route::has($domain->route_name))
+                            <span class="badge bg-light text-muted">当前账号无业务入口</span>
                         @else
                             <span class="badge bg-light text-dark">待建设</span>
                         @endif
