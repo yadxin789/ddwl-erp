@@ -463,10 +463,15 @@ class MasterDataController extends Controller
                 'required', 'string', 'max:32',
                 Rule::unique('payment_terms', 'code')->ignore($ignoreId),
             ],
-            'name' => ['required', 'string', 'max:64'],
+            'name' => [
+                'required', 'string', 'max:64',
+                Rule::unique('payment_terms', 'name')->ignore($ignoreId),
+            ],
             'days' => ['required', 'integer', 'min:0', 'max:365'],
             'description' => ['nullable', 'string', 'max:255'],
             'status' => ['required', 'in:0,1'],
+        ], [
+            'name.unique' => '结算方式名称已存在，客户/供应商下拉会重名',
         ]);
         $data['status'] = (bool) $data['status'];
 

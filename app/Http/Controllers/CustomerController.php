@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Customer\CustomerStoreRequest;
 use App\Http\Requests\Customer\CustomerUpdateRequest;
+use App\Models\Finance\PaymentTerm;
 use App\Models\MasterData\Customer;
 use Illuminate\Http\Request;
 
@@ -29,7 +30,7 @@ class CustomerController extends Controller
 
     public function create()
     {
-        return view('customers.create');
+        return view('customers.create', ['paymentTerms' => $this->paymentTerms()]);
     }
 
     public function store(CustomerStoreRequest $request)
@@ -44,7 +45,10 @@ class CustomerController extends Controller
 
     public function edit(Customer $customer)
     {
-        return view('customers.edit', compact('customer'));
+        return view('customers.edit', [
+            'customer' => $customer,
+            'paymentTerms' => $this->paymentTerms(),
+        ]);
     }
 
     public function update(CustomerUpdateRequest $request, Customer $customer)
@@ -54,5 +58,14 @@ class CustomerController extends Controller
         $customer->update($validated);
 
         return redirect()->route('customers.index')->with('success', '客户更新成功。');
+    }
+
+    private function paymentTerms()
+    {
+        return PaymentTerm::query()
+            ->where('status', 1)
+            ->orderBy('days')
+            ->orderBy('name')
+            ->get();
     }
 }

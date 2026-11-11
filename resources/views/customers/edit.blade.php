@@ -32,7 +32,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">结算方式</label>
-                    <input type="text" name="payment_terms" class="form-control" value="{{ $customer->payment_terms }}">
+                    @include('partials.payment-terms-select', ['paymentTerms' => $paymentTerms, 'selected' => $customer->payment_terms])
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">信用额度（元）</label>

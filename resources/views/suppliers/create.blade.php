@@ -36,7 +36,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">结算方式</label>
-                    <input type="text" name="payment_terms" class="form-control" value="{{ old('payment_terms') }}">
+                    @include('partials.payment-terms-select', ['paymentTerms' => $paymentTerms, 'selected' => old('payment_terms')])
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">采购交期（天）</label>

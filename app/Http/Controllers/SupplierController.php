@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Supplier\SupplierStoreRequest;
 use App\Http\Requests\Supplier\SupplierUpdateRequest;
+use App\Models\Finance\PaymentTerm;
 use App\Models\MasterData\Supplier;
 use Illuminate\Http\Request;
 
@@ -29,7 +30,7 @@ class SupplierController extends Controller
 
     public function create()
     {
-        return view('suppliers.create');
+        return view('suppliers.create', ['paymentTerms' => $this->paymentTerms()]);
     }
 
     public function store(SupplierStoreRequest $request)
@@ -44,7 +45,10 @@ class SupplierController extends Controller
 
     public function edit(Supplier $supplier)
     {
-        return view('suppliers.edit', compact('supplier'));
+        return view('suppliers.edit', [
+            'supplier' => $supplier,
+            'paymentTerms' => $this->paymentTerms(),
+        ]);
     }
 
     public function update(SupplierUpdateRequest $request, Supplier $supplier)
@@ -54,5 +58,14 @@ class SupplierController extends Controller
         $supplier->update($validated);
 
         return redirect()->route('suppliers.index')->with('success', '供应商更新成功。');
+    }
+
+    private function paymentTerms()
+    {
+        return PaymentTerm::query()
+            ->where('status', 1)
+            ->orderBy('days')
+            ->orderBy('name')
+            ->get();
     }
 }

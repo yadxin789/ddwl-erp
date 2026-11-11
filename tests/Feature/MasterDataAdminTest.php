@@ -6,6 +6,8 @@ use App\Models\Approval\ApprovalFlow;
 use App\Models\Finance\PaymentTerm;
 use App\Models\Finance\TaxEntity;
 use App\Models\Finance\TaxRate;
+use App\Models\MasterData\Customer;
+use App\Models\MasterData\Supplier;
 use App\Models\Organization\Department;
 use App\Models\Organization\User;
 use App\Models\Rnd\RndTaskType;
@@ -349,6 +351,76 @@ class MasterDataAdminTest extends TestCase
             'current_seq' => 12,
             'status' => 0,
         ]);
+    }
+
+    public function test_customer_and_supplier_forms_use_payment_term_dictionary(): void
+    {
+        $sales = User::where('username', 'sales')->firstOrFail();
+        $purchase = User::where('username', 'purchase')->firstOrFail();
+
+        $this->actingAs($sales)
+            ->get(route('customers.create'))
+            ->assertOk()
+            ->assertSee('月结30天')
+            ->assertSee('月结90天');
+
+        $this->actingAs($purchase)
+            ->get(route('suppliers.create'))
+            ->assertOk()
+            ->assertSee('货到付款')
+            ->assertSee('预付100%');
+
+        $this->actingAs($sales)
+            ->post(route('customers.store'), [
+                'customer_code' => 'TST-CUST-' . uniqid(),
+                'customer_name' => '结算方式下拉测试客户',
+                'payment_terms' => '月结30天',
+            ])
+            ->assertRedirect(route('customers.index'));
+
+        $this->assertDatabaseHas('customers', [
+            'customer_name' => '结算方式下拉测试客户',
+            'payment_terms' => '月结30天',
+        ]);
+
+        $this->actingAs($purchase)
+            ->post(route('suppliers.store'), [
+                'supplier_code' => 'TST-SUP-' . uniqid(),
+                'supplier_name' => '结算方式下拉测试供应商',
+                'payment_terms' => '货到付款',
+            ])
+            ->assertRedirect(route('suppliers.index'));
+
+        $this->assertDatabaseHas('suppliers', [
+            'supplier_name' => '结算方式下拉测试供应商',
+            'payment_terms' => '货到付款',
+        ]);
+    }
+
+    public function test_inactive_payment_term_is_not_offered_and_existing_value_is_kept(): void
+    {
+        $term = PaymentTerm::where('code', 'NET60')->firstOrFail();
+        $term->update(['status' => false]);
+
+        $sales = User::where('username', 'sales')->firstOrFail();
+        $this->actingAs($sales)
+            ->get(route('customers.create'))
+            ->assertOk()
+            ->assertDontSee('月结60天');
+
+        $customer = Customer::create([
+            'customer_code' => 'TST-CUST-LEGACY-' . uniqid(),
+            'customer_name' => '历史结算方式客户',
+            'payment_terms' => '月结60天',
+            'owner_id' => $sales->id,
+            'department_id' => $sales->department_id,
+            'status' => 1,
+        ]);
+
+        $this->actingAs($sales)
+            ->get(route('customers.edit', $customer))
+            ->assertOk()
+            ->assertSee('月结60天（历史值，不在当前字典）');
     }
 
     private function actorDelete(string $url)
