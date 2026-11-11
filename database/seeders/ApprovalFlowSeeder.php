@@ -102,7 +102,8 @@ class ApprovalFlowSeeder extends Seeder
         ];
 
         foreach ($flows as $f) {
-            ApprovalFlow::updateOrCreate(
+            // 只补缺失，不覆盖后台调整过的审批人、步骤与启停状态
+            ApprovalFlow::firstOrCreate(
                 ['flow_code' => $f['flow_code']],
                 [
                     'flow_name' => $f['flow_name'],

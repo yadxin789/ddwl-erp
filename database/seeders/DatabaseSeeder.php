@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
             MasterDataDomainSeeder::class,
             WarehouseSeeder::class,
             NumberSequenceSeeder::class,
+            TaxMasterSeeder::class,
+            PaymentTermSeeder::class,
             AdminSeeder::class,
             DemoUserSeeder::class,
             // v1.3：29 岗位角色 + 4 兼容角色 + 演示账号岗位绑定（必须在账号创建之后）

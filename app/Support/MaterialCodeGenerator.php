@@ -34,11 +34,12 @@ class MaterialCodeGenerator
         return DB::transaction(function () use ($categoryCode) {
             /** @var NumberSequence $seq */
             $seq = NumberSequence::where('rule_code', 'material_code:' . $categoryCode)
+                ->where('status', 1)
                 ->lockForUpdate()
                 ->first();
 
             if (! $seq) {
-                throw new \RuntimeException('编号规则未初始化: material_code:' . $categoryCode . '，请先运行 NumberSequenceSeeder');
+                throw new \RuntimeException('编号规则未初始化或已停用: material_code:' . $categoryCode . '，请检查基础数据 → 单据编号规则');
             }
 
             $next = $seq->current_seq + 1;

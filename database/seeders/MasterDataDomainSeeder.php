@@ -24,21 +24,21 @@ class MasterDataDomainSeeder extends Seeder
             ['rnd.task_type', '研发任务类型', 'D-RND', 'admin.master-data.task-types', '研发部定类型清单与命名口径，管理员在后台维护。'],
             ['master.material_category', '物料分类与子类', 'D-RND', 'materials.index', '物料分类口径由研发部负责，避免一物多类。'],
             ['master.material', '物料主数据', 'D-RND', 'materials.index', '物料编码、名称、规格、单位与分类；研发部归口。'],
-            ['master.unit', '计量单位', 'D-RND', null, '物料与BOM使用的计量单位标准；待建后台维护页。'],
+            ['master.unit', '计量单位', 'D-RND', 'admin.master-data.units', '物料与BOM使用的计量单位标准；由管理员统一维护。'],
             ['inventory.warehouse', '仓库与库位', 'D-WH', 'warehouse.index', '仓库、库位与启停；仓储部归口。'],
             ['sales.customer', '客户主数据', 'D-SAL', 'customers.index', '客户档案与分类；销售部归口。'],
             ['purchase.supplier', '供应商主数据', 'D-PUR', 'suppliers.index', '供应商档案与分类；采购部归口。'],
             ['quality.template', '质检模板与缺陷类型', 'D-QC', 'quality.templates', '检验项目、判定标准与缺陷分类；品质部归口。'],
             ['production.work_center', '工作中心与工艺路线', 'D-PROD', 'production.work-centers', '产能、工时与工艺路线基础参数；生产部归口。'],
             ['product.category', '产品分类与品牌', 'D-ECM', 'product.categories', '产品分类、品牌与电商产品结构；电商部归口。'],
-            ['finance.tax', '税率与结算方式', 'D-FIN', null, '税率、结算条件与币种口径；财务部归口，待建后台维护页。'],
-            ['approval.flow', '审批流程', 'D-GM', null, '跨部门审批链与审批人规则；总经理室归口，待建后台维护页。'],
-            ['system.numbering', '单据编号规则', 'D-SYS', null, '各类单据编号前缀与流水规则；管理员归口，待建后台维护页。'],
+            ['finance.tax', '税率与结算方式', 'D-FIN', 'admin.master-data.tax-terms', '税目、税率与账期结算方式；财务部归口，管理员统一维护。'],
+            ['approval.flow', '审批流程', 'D-GM', 'admin.master-data.approval-flows', '跨部门审批链与审批人规则；总经理室归口，管理员统一维护。'],
+            ['system.numbering', '单据编号规则', 'D-SYS', 'admin.master-data.number-sequences', '各类单据编号前缀与流水规则；管理员归口。'],
         ];
 
         $sort = 1;
         foreach ($domains as [$code, $name, $deptCode, $routeName, $description]) {
-            MasterDataDomain::firstOrCreate(
+            $domain = MasterDataDomain::firstOrCreate(
                 ['code' => $code],
                 [
                     'name' => $name,
@@ -49,6 +49,11 @@ class MasterDataDomainSeeder extends Seeder
                     'sort_order' => $sort,
                 ]
             );
+
+            // 已登记的数据域：只补缺失的维护入口，不覆盖后台调整过的归口部门
+            if ($routeName && blank($domain->route_name)) {
+                $domain->update(['route_name' => $routeName]);
+            }
             $sort++;
         }
     }

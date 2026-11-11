@@ -2,10 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\Approval\ApprovalFlow;
+use App\Models\Finance\PaymentTerm;
+use App\Models\Finance\TaxEntity;
+use App\Models\Finance\TaxRate;
 use App\Models\Organization\Department;
 use App\Models\Organization\User;
 use App\Models\Rnd\RndTaskType;
 use App\Models\System\MasterDataDomain;
+use App\Models\System\NumberSequence;
+use App\Models\System\Unit;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -173,5 +179,180 @@ class MasterDataAdminTest extends TestCase
             ->get(route('rnd.projects.create'))
             ->assertOk()
             ->assertDontSee($type->name);
+    }
+
+    public function test_master_data_dictionary_pages_are_admin_only(): void
+    {
+        $pages = [
+            'admin.master-data.units' => '计量单位维护',
+            'admin.master-data.tax-terms' => '税率与结算方式',
+            'admin.master-data.approval-flows' => '审批流程维护',
+            'admin.master-data.number-sequences' => '单据编号规则',
+        ];
+
+        foreach ($pages as $routeName => $title) {
+            $this->actingAs($this->admin)
+                ->get(route($routeName))
+                ->assertOk()
+                ->assertSee($title);
+
+            $this->actingAs($this->manager)
+                ->get(route($routeName))
+                ->assertForbidden();
+        }
+    }
+
+    public function test_unit_can_be_created_and_used_unit_cannot_be_deleted(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.master-data.units.store'), [
+                'unit_code' => 'TSTU',
+                'unit_name' => '测试单位',
+                'conversion_factor' => 1,
+                'status' => 1,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $unit = Unit::where('unit_code', 'TSTU')->firstOrFail();
+        $this->actorDelete(route('admin.master-data.units.destroy', $unit))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+        $this->assertDatabaseMissing('units', ['id' => $unit->id]);
+
+        // 已被物料引用（materials.unit 存的是单位编码）的单位只能停用
+        $used = Unit::where('unit_code', 'PCS')->firstOrFail();
+        $this->actingAs($this->admin)
+            ->delete(route('admin.master-data.units.destroy', $used))
+            ->assertRedirect()
+            ->assertSessionHasErrors('unit');
+        $this->assertDatabaseHas('units', ['id' => $used->id]);
+    }
+
+    public function test_tax_entity_rate_and_payment_term_can_be_maintained(): void
+    {
+        $this->actingAs($this->admin)
+            ->post(route('admin.master-data.tax-entities.store'), [
+                'code' => 'TEST_TAX',
+                'name' => '测试税目',
+                'type' => 'vat',
+                'status' => 1,
+            ])->assertRedirect()->assertSessionHas('success');
+
+        $entity = TaxEntity::where('code', 'TEST_TAX')->firstOrFail();
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.master-data.tax-rates.store'), [
+                'tax_entity_id' => $entity->id,
+                'tax_type' => '测试税率',
+                'rate' => 5.5,
+                'status' => 1,
+            ])->assertRedirect()->assertSessionHas('success');
+
+        $rate = TaxRate::where('tax_entity_id', $entity->id)->firstOrFail();
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.master-data.tax-entities.destroy', $entity))
+            ->assertRedirect()
+            ->assertSessionHasErrors('tax_entity');
+        $this->assertDatabaseHas('tax_entities', ['id' => $entity->id]);
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.master-data.tax-rates.destroy', $rate))
+            ->assertRedirect();
+        $this->actingAs($this->admin)
+            ->delete(route('admin.master-data.tax-entities.destroy', $entity))
+            ->assertRedirect();
+        $this->assertDatabaseMissing('tax_entities', ['id' => $entity->id]);
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.master-data.payment-terms.store'), [
+                'code' => 'TEST_NET',
+                'name' => '测试结算',
+                'days' => 15,
+                'description' => '测试',
+                'status' => 1,
+            ])->assertRedirect()->assertSessionHas('success');
+
+        $term = PaymentTerm::where('code', 'TEST_NET')->firstOrFail();
+        $this->actingAs($this->admin)
+            ->put(route('admin.master-data.payment-terms.update', $term), [
+                'code' => 'TEST_NET',
+                'name' => '测试结算（改）',
+                'days' => 20,
+                'description' => '测试改名',
+                'status' => 0,
+            ])->assertRedirect()->assertSessionHas('success');
+        $this->assertDatabaseHas('payment_terms', ['id' => $term->id, 'name' => '测试结算（改）', 'status' => 0]);
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.master-data.payment-terms.destroy', $term))
+            ->assertRedirect();
+        $this->assertDatabaseMissing('payment_terms', ['id' => $term->id]);
+    }
+
+    public function test_approval_flow_can_be_created_and_deleted(): void
+    {
+        $this->actingAs($this->admin)
+            ->get(route('admin.master-data.approval-flows.create'))
+            ->assertOk()
+            ->assertSee('审批节点');
+
+        $this->actingAs($this->admin)
+            ->post(route('admin.master-data.approval-flows.store'), [
+                'flow_code' => 'flow_test_admin',
+                'flow_name' => '测试审批流',
+                'business_type' => 'test.admin',
+                'status' => 1,
+                'steps' => [[
+                    'name' => '管理员审批',
+                    'permission' => 'admin.masterdata.manage',
+                    'approver_id' => $this->admin->id,
+                    'delegate_ids' => [],
+                ]],
+            ])->assertRedirect(route('admin.master-data.approval-flows'));
+
+        $flow = ApprovalFlow::where('flow_code', 'flow_test_admin')->firstOrFail();
+        $this->assertSame(1, $flow->steps_json[0]['step']);
+        $this->assertSame($this->admin->id, $flow->steps_json[0]['approver_id']);
+
+        $this->actingAs($this->admin)
+            ->get(route('admin.master-data.approval-flows.edit', $flow))
+            ->assertOk()
+            ->assertSee('测试审批流');
+
+        $this->actingAs($this->admin)
+            ->delete(route('admin.master-data.approval-flows.destroy', $flow))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+        $this->assertDatabaseMissing('approval_flows', ['id' => $flow->id]);
+    }
+
+    public function test_number_sequence_can_be_updated_and_disabled(): void
+    {
+        $rule = NumberSequence::query()->orderBy('id')->firstOrFail();
+
+        $this->actingAs($this->admin)
+            ->put(route('admin.master-data.number-sequences.update', $rule), [
+                'prefix' => 'T',
+                'date_format' => 'Ymd',
+                'seq_length' => 6,
+                'current_seq' => 12,
+                'description' => '测试规则',
+                'status' => 0,
+            ])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertDatabaseHas('number_sequences', [
+            'id' => $rule->id,
+            'prefix' => 'T',
+            'seq_length' => 6,
+            'current_seq' => 12,
+            'status' => 0,
+        ]);
+    }
+
+    private function actorDelete(string $url)
+    {
+        return $this->actingAs($this->admin)->delete($url);
     }
 }

@@ -10,10 +10,14 @@
             总原则：每一类基础数据只对应一个归口部门。归口部门负责口径与命名标准，管理员负责系统维护。
             字典变更遵循“归口部门确认 → 管理员后台操作”，并保留停用能力，避免历史单据断链。
         </p>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2">
             <a href="{{ route('admin.master-data.task-types') }}" class="btn btn-sm btn-primary">
-                <i class="fa fa-list-check me-1"></i>研发任务类型维护
+                <i class="fa fa-list-check me-1"></i>研发任务类型
             </a>
+            <a href="{{ route('admin.master-data.units') }}" class="btn btn-sm btn-outline-primary">计量单位</a>
+            <a href="{{ route('admin.master-data.tax-terms') }}" class="btn btn-sm btn-outline-primary">税率与结算方式</a>
+            <a href="{{ route('admin.master-data.approval-flows') }}" class="btn btn-sm btn-outline-primary">审批流程</a>
+            <a href="{{ route('admin.master-data.number-sequences') }}" class="btn btn-sm btn-outline-primary">单据编号规则</a>
         </div>
     </div>
 </div>

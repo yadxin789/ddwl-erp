@@ -333,6 +333,44 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class, \App\Ht
             ->whereNumber('taskType')->name('admin.master-data.task-types.update');
         Route::delete('/admin/master-data/task-types/{taskType}', [MasterDataController::class, 'taskTypeDestroy'])
             ->whereNumber('taskType')->name('admin.master-data.task-types.destroy');
+
+        Route::get('/admin/master-data/units', [MasterDataController::class, 'units'])->name('admin.master-data.units');
+        Route::post('/admin/master-data/units', [MasterDataController::class, 'unitStore'])->name('admin.master-data.units.store');
+        Route::put('/admin/master-data/units/{unit}', [MasterDataController::class, 'unitUpdate'])
+            ->whereNumber('unit')->name('admin.master-data.units.update');
+        Route::delete('/admin/master-data/units/{unit}', [MasterDataController::class, 'unitDestroy'])
+            ->whereNumber('unit')->name('admin.master-data.units.destroy');
+
+        Route::get('/admin/master-data/tax-terms', [MasterDataController::class, 'taxTerms'])->name('admin.master-data.tax-terms');
+        Route::post('/admin/master-data/tax-entities', [MasterDataController::class, 'taxEntityStore'])->name('admin.master-data.tax-entities.store');
+        Route::put('/admin/master-data/tax-entities/{entity}', [MasterDataController::class, 'taxEntityUpdate'])
+            ->whereNumber('entity')->name('admin.master-data.tax-entities.update');
+        Route::delete('/admin/master-data/tax-entities/{entity}', [MasterDataController::class, 'taxEntityDestroy'])
+            ->whereNumber('entity')->name('admin.master-data.tax-entities.destroy');
+        Route::post('/admin/master-data/tax-rates', [MasterDataController::class, 'taxRateStore'])->name('admin.master-data.tax-rates.store');
+        Route::put('/admin/master-data/tax-rates/{rate}', [MasterDataController::class, 'taxRateUpdate'])
+            ->whereNumber('rate')->name('admin.master-data.tax-rates.update');
+        Route::delete('/admin/master-data/tax-rates/{rate}', [MasterDataController::class, 'taxRateDestroy'])
+            ->whereNumber('rate')->name('admin.master-data.tax-rates.destroy');
+        Route::post('/admin/master-data/payment-terms', [MasterDataController::class, 'paymentTermStore'])->name('admin.master-data.payment-terms.store');
+        Route::put('/admin/master-data/payment-terms/{term}', [MasterDataController::class, 'paymentTermUpdate'])
+            ->whereNumber('term')->name('admin.master-data.payment-terms.update');
+        Route::delete('/admin/master-data/payment-terms/{term}', [MasterDataController::class, 'paymentTermDestroy'])
+            ->whereNumber('term')->name('admin.master-data.payment-terms.destroy');
+
+        Route::get('/admin/master-data/approval-flows', [MasterDataController::class, 'approvalFlows'])->name('admin.master-data.approval-flows');
+        Route::get('/admin/master-data/approval-flows/create', [MasterDataController::class, 'approvalFlowCreate'])->name('admin.master-data.approval-flows.create');
+        Route::post('/admin/master-data/approval-flows', [MasterDataController::class, 'approvalFlowStore'])->name('admin.master-data.approval-flows.store');
+        Route::get('/admin/master-data/approval-flows/{flow}/edit', [MasterDataController::class, 'approvalFlowEdit'])
+            ->whereNumber('flow')->name('admin.master-data.approval-flows.edit');
+        Route::put('/admin/master-data/approval-flows/{flow}', [MasterDataController::class, 'approvalFlowUpdate'])
+            ->whereNumber('flow')->name('admin.master-data.approval-flows.update');
+        Route::delete('/admin/master-data/approval-flows/{flow}', [MasterDataController::class, 'approvalFlowDestroy'])
+            ->whereNumber('flow')->name('admin.master-data.approval-flows.destroy');
+
+        Route::get('/admin/master-data/number-sequences', [MasterDataController::class, 'numberSequences'])->name('admin.master-data.number-sequences');
+        Route::put('/admin/master-data/number-sequences/{sequence}', [MasterDataController::class, 'numberSequenceUpdate'])
+            ->whereNumber('sequence')->name('admin.master-data.number-sequences.update');
     });
 
     Route::middleware('permission:admin.permission.manage')->group(function () {
