@@ -67,6 +67,8 @@ class PermissionSeeder extends Seeder
 
             // 系统扩展（研发/电商 P1 预留）
             'rnd.view', 'rnd.create', 'rnd.edit', 'rnd.approve',
+            // 研发项目创建权与日常研发操作权分离：只有项目经理能建项目
+            'rnd.project.create',
             'ecommerce.view', 'ecommerce.operate', 'ecommerce.audit',
 
             // P0 修复：补齐此前缺失的模块权限（审计报告 4.1 节）

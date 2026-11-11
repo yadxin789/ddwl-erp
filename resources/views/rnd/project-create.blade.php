@@ -222,6 +222,7 @@
 @section('scripts')
 <script>
     const usersByDept = @json($usersByDept, JSON_UNESCAPED_UNICODE);
+    const auditorsByDept = @json($auditorsByDept, JSON_UNESCAPED_UNICODE);
     const defaultExecutors = @json($defaultExecutors);
     const defaultAuditors = @json($defaultAuditors);
     const deptOrder = @json($deptOrder);
@@ -324,16 +325,17 @@
     function fillUserSelect(select, deptId, selectedId, type) {
         if (!select) return;
         select.innerHTML = '';
-        const list = usersByDept[deptId] || [];
+        const list = type === 'auditor' ? (auditorsByDept[deptId] || []) : (usersByDept[deptId] || []);
         if (!list.length) {
-            select.appendChild(new Option('无部门人员', ''));
+            select.appendChild(new Option(type === 'auditor' ? '该部门未配置部门经理' : '无部门人员', ''));
             return;
         }
         list.forEach(function (user) {
             select.appendChild(new Option(user.label, user.id));
         });
         const defaults = type === 'executor' ? defaultExecutors : defaultAuditors;
-        select.value = selectedId || defaults[deptId] || list[0].id;
+        const allowedSelected = selectedId && list.some(function (user) { return String(user.id) === String(selectedId); });
+        select.value = (allowedSelected ? selectedId : (defaults[deptId] || list[0].id));
     }
 
     function addDays(date, days) {

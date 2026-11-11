@@ -6,7 +6,7 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span>研发项目（共 {{ $projects->total() }} 个）</span>
-        @can('rnd.create')
+        @can('rnd.project.create')
         <a href="{{ route('rnd.projects.create') }}" class="btn btn-primary btn-sm">新建项目</a>
         @endcan
     </div>

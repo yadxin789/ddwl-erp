@@ -7,7 +7,8 @@ use App\Models\Rnd\RndProject;
 
 /**
  * P0-05 / D-01：研发项目对象级授权
- * view：创建人、任务执行人/审核人、研发经理；createTask：创建人或研发经理。
+ * view：创建人、任务执行人/审核人、研发经理（系统管理员）；createTask：创建人或研发经理。
+ * 注意：rnd.approve 只代表“可审核”，不再等同于“研发经理”，避免各部门审核人越权看全部项目。
  */
 class RndProjectPolicy
 {
@@ -41,6 +42,6 @@ class RndProjectPolicy
 
     private function isManager(User $user): bool
     {
-        return $user->hasRole('role_rnd_manager') || $user->hasPermissionTo('rnd.approve');
+        return $user->hasRole('role_rnd_manager') || $user->hasRole('role_sys_admin');
     }
 }

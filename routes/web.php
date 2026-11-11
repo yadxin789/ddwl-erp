@@ -469,13 +469,15 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group
         Route::delete('/project-templates/{template}', [ProjectTemplateController::class, 'destroy'])
             ->whereNumber('template')->name('project.templates.destroy');
         Route::post('/project-templates/{template}/apply', [ProjectTemplateController::class, 'apply'])
-            ->whereNumber('template')->name('project.templates.apply');
+            ->whereNumber('template')
+            ->middleware('permission:rnd.project.create')
+            ->name('project.templates.apply');
     });
 
-    // 创建研发项目页导入模板配置（页面本身在 rnd.create 权限组内）
+    // 创建研发项目页导入模板配置（页面本身在 rnd.project.create 权限组内）
     Route::get('/project-templates/{template}/config', [ProjectTemplateController::class, 'config'])
         ->whereNumber('template')
-        ->middleware('permission:rnd.create')
+        ->middleware('permission:rnd.project.create')
         ->name('project.templates.config');
 
     // 支援中心（G12）
@@ -489,31 +491,35 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group
         Route::get('/rnd/projects', [RndController::class, 'projects'])->name('rnd.projects');
         Route::get('/rnd/projects/{project}', [RndController::class, 'projectShow'])->whereNumber('project')->name('rnd.projects.show');
         Route::get('/rnd/task-types', [RndController::class, 'taskTypes'])->name('rnd.task-types');
-    });
-    Route::middleware('permission:rnd.create')->group(function () {
-        // P0-06：交付物上传台（无参入口）
+
+        // 交付物上传台 / 上传 / 任务开始与提交 / 延期申请：执行人、审核人、项目经理都可进入，具体由 Policy 判人
         Route::get('/rnd/documents', [RndController::class, 'documents'])->name('rnd.documents');
+        Route::post('/rnd/tasks/{task}/documents', [RndController::class, 'documentUpload'])->name('rnd.documents.upload');
+        Route::post('/rnd/tasks/{task}/extensions', [RndController::class, 'extensionStore'])->name('rnd.extensions.store');
+        Route::post('/rnd/tasks/{task}/start', [RndController::class, 'taskStart'])->whereNumber('task')->name('rnd.tasks.start');
+        Route::post('/rnd/tasks/{task}/submit', [RndController::class, 'taskSubmit'])->whereNumber('task')->name('rnd.tasks.submit');
+        Route::get('/rnd/projects/{project}/ecr/impact', [RndController::class, 'ecrImpact'])->whereNumber('project')->name('rnd.ecr.impact');
+    });
+
+    // 只有项目经理（研发经理）可以新建研发项目（参考项目 ProjectPolicy::create = isProjectCreator||isAdmin）
+    Route::middleware('permission:rnd.project.create')->group(function () {
         Route::get('/rnd/projects/create', [RndController::class, 'projectCreate'])->name('rnd.projects.create');
         Route::post('/rnd/projects', [RndController::class, 'projectStore'])->name('rnd.projects.store');
-        Route::post('/rnd/projects/{project}/tasks', [RndController::class, 'taskStore'])->name('rnd.tasks.store');
-        Route::post('/rnd/tasks/{task}/documents', [RndController::class, 'documentUpload'])->name('rnd.documents.upload');
-        Route::post('/rnd/documents/{document}/audit', [RndController::class, 'documentAudit'])->name('rnd.documents.audit');
-        Route::post('/rnd/tasks/{task}/extensions', [RndController::class, 'extensionStore'])->name('rnd.extensions.store');
+    });
 
-        // P1-05：阶段推进（试产需基线）、设基线、简版 ECR/ECO
+    Route::middleware('permission:rnd.create')->group(function () {
+        // 项目内任务派工 / 阶段推进 / 设基线 / 简版 ECR-ECO：由 Policy 限定创建人或研发经理
+        Route::post('/rnd/projects/{project}/tasks', [RndController::class, 'taskStore'])->name('rnd.tasks.store');
         Route::post('/rnd/projects/{project}/stage', [RndController::class, 'projectStage'])->whereNumber('project')->name('rnd.projects.stage');
         Route::post('/rnd/documents/{document}/baseline', [RndController::class, 'documentBaseline'])->whereNumber('document')->name('rnd.documents.baseline');
         Route::post('/rnd/projects/{project}/ecr', [RndController::class, 'ecrStore'])->whereNumber('project')->name('rnd.ecr.store');
-        Route::get('/rnd/projects/{project}/ecr/impact', [RndController::class, 'ecrImpact'])->whereNumber('project')->name('rnd.ecr.impact');
-
-        // P1-05：我的任务 开始 / 提交 / 审核
-        Route::post('/rnd/tasks/{task}/start', [RndController::class, 'taskStart'])->whereNumber('task')->name('rnd.tasks.start');
-        Route::post('/rnd/tasks/{task}/submit', [RndController::class, 'taskSubmit'])->whereNumber('task')->name('rnd.tasks.submit');
-        Route::post('/rnd/tasks/{task}/decide', [RndController::class, 'taskDecide'])->whereNumber('task')->name('rnd.tasks.decide');
     });
+
     Route::middleware('permission:rnd.approve')->group(function () {
-        // P0-06：交付物审核台（无参入口）
+        // P0-06：交付物审核台（无参入口）；审核动作只允许任务指定的部门经理
         Route::get('/rnd/documents/review', [RndController::class, 'documentReview'])->name('rnd.documents.review');
+        Route::post('/rnd/documents/{document}/audit', [RndController::class, 'documentAudit'])->name('rnd.documents.audit');
+        Route::post('/rnd/tasks/{task}/decide', [RndController::class, 'taskDecide'])->whereNumber('task')->name('rnd.tasks.decide');
     });
 
     // 协同办公（个人工作台，仅 auth）

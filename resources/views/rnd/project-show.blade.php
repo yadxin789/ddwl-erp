@@ -273,34 +273,35 @@
 <script>
 (function () {
     var usersByDept = @json($usersByDept, JSON_UNESCAPED_UNICODE);
+    var auditorsByDept = @json($auditorsByDept, JSON_UNESCAPED_UNICODE);
     var defaultExecutors = @json($defaultExecutors);
     var defaultAuditors = @json($defaultAuditors);
     var typeSelect = document.getElementById('newTaskType');
     if (!typeSelect) return;
 
-    function fill(select, deptId, selectedId, allowEmpty) {
+    function fill(select, deptId, selectedId, type) {
         if (!select) return;
         select.innerHTML = '';
-        if (allowEmpty) select.appendChild(new Option('不指定', ''));
-        var list = usersByDept[deptId] || [];
+        var list = type === 'auditor' ? (auditorsByDept[deptId] || []) : (usersByDept[deptId] || []);
         if (!list.length) {
-            select.appendChild(new Option('该部门暂无在岗账号', ''));
+            select.appendChild(new Option(type === 'auditor' ? '该部门未配置部门经理' : '该部门暂无在岗账号', ''));
             return;
         }
         list.forEach(function (user) {
             select.appendChild(new Option(user.label, user.id));
         });
+        var defaults = type === 'executor' ? defaultExecutors : defaultAuditors;
         select.value = selectedId && list.some(function (u) { return String(u.id) === String(selectedId); })
             ? selectedId
-            : list[0].id;
+            : (defaults[deptId] || list[0].id);
     }
 
     function refresh() {
         var option = typeSelect.options[typeSelect.selectedIndex];
         var deptId = option ? (option.dataset.deptId || '') : '';
         document.getElementById('newTaskDept').value = deptId;
-        fill(document.getElementById('newTaskExecutor'), deptId, defaultExecutors[deptId], false);
-        fill(document.getElementById('newTaskAuditor'), deptId, defaultAuditors[deptId], true);
+        fill(document.getElementById('newTaskExecutor'), deptId, defaultExecutors[deptId], 'executor');
+        fill(document.getElementById('newTaskAuditor'), deptId, defaultAuditors[deptId], 'auditor');
     }
 
     typeSelect.addEventListener('change', refresh);

@@ -29,6 +29,17 @@ class RndProjectService
     {
         Log::info('创建研发项目', ['user_id' => Auth::id(), 'project_name' => $data['project_name'] ?? null]);
 
+        foreach ($tasksByDept as $deptId => $tasks) {
+            foreach ($tasks as $taskData) {
+                $this->assertAuditorIsDepartmentManager(
+                    (int) $deptId,
+                    $taskData['auditor_id'] ?? null,
+                    $taskData['executor_id'] ?? null,
+                    (string) (($taskData['name'] ?? '') ?: '未命名任务')
+                );
+            }
+        }
+
         return DB::transaction(function () use ($data, $tasksByDept, $selectedDeptIds, $deptDays) {
             $deptIds = Department::query()
                 ->whereIn('id', array_map('intval', $selectedDeptIds))
@@ -108,12 +119,20 @@ class RndProjectService
 
         $taskType = RndTaskType::find($data['task_type_id'] ?? null);
         $taskName = trim((string) ($data['name'] ?? '')) ?: ($taskType->name ?? '交付物');
+        $deptId = (int) ($data['department_id'] ?? $taskType?->department_id ?? 0);
+
+        $this->assertAuditorIsDepartmentManager(
+            $deptId,
+            $data['auditor_id'] ?? null,
+            $data['executor_id'] ?? null,
+            $taskName
+        );
 
         $task = RndProjectTask::create([
             'project_id' => $projectId,
             'task_type_id' => $data['task_type_id'],
             'name' => $taskName,
-            'department_id' => $data['department_id'] ?? $taskType?->department_id,
+            'department_id' => $deptId ?: null,
             'executor_id' => $data['executor_id'],
             'auditor_id' => $data['auditor_id'] ?? null,
             'start_date' => $data['start_date'] ?? null,
@@ -518,6 +537,27 @@ class RndProjectService
         $done = $project->tasks()->where('status', 'approved')->count();
         if ($total > 0 && $done === $total && $project->status === 'in_progress') {
             $project->update(['status' => 'completed', 'progress' => 100]);
+        }
+    }
+
+    /**
+     * 任务审核人只能是任务所属部门的部门经理，且不能是执行人本人。
+     * 这是服务层最后一道防线（页面下拉、控制器校验、服务层校验三处一致）。
+     */
+    private function assertAuditorIsDepartmentManager(int $deptId, mixed $auditorId, mixed $executorId, string $taskName): void
+    {
+        $manager = $deptId ? Department::find($deptId)?->resolvedManager() : null;
+
+        if (! $manager) {
+            throw new \DomainException("任务「{$taskName}」所属部门未配置部门经理，无法指定审核人");
+        }
+        if ((int) $auditorId !== (int) $manager->id) {
+            throw new \DomainException(
+                "任务「{$taskName}」的审核人必须是本部门经理（{$manager->identity_label}）"
+            );
+        }
+        if ((int) $auditorId === (int) $executorId) {
+            throw new \DomainException("任务「{$taskName}」的审核人不能是执行人本人");
         }
     }
 }

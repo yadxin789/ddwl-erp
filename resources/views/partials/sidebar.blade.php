@@ -27,6 +27,9 @@
                 <a class="nav-link {{ request()->routeIs($item['route']) || request()->routeIs($item['route'] . '*') ? 'active' : '' }}"
                    href="{{ $item['url'] }}">
                     <i class="fa-solid {{ $item['icon'] }}"></i>{{ $item['name'] }}
+                    @if(($item['badge'] ?? null) !== null)
+                        <span class="badge {{ $item['badge'] > 0 ? 'bg-danger' : 'bg-secondary' }} ms-1">{{ $item['badge'] }}</span>
+                    @endif
                 </a>
             @endforeach
         @endif
@@ -37,6 +40,9 @@
                 <a class="nav-link {{ request()->routeIs($item['route']) || request()->routeIs($item['route'] . '*') ? 'active' : '' }}"
                    href="{{ $item['url'] }}">
                     <i class="fa-solid {{ $item['icon'] }}"></i>{{ $item['name'] }}
+                    @if(($item['badge'] ?? null) !== null)
+                        <span class="badge {{ $item['badge'] > 0 ? 'bg-danger' : 'bg-secondary' }} ms-1">{{ $item['badge'] }}</span>
+                    @endif
                 </a>
             @endforeach
         @endif

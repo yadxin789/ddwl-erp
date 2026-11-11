@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\Rnd\RndProject;
+use App\Models\Rnd\RndProjectDocument;
+use App\Models\Rnd\RndProjectTask;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Route;
 
@@ -148,7 +151,54 @@ class NavigationService
             'url' => route($routeName),
             'icon' => config('navigation.icons.' . $name, config('navigation.default_icon', 'fa-circle-dot')),
             'permissions' => $permissions,
+            'badge' => $this->badge($name, $user),
         ];
+    }
+
+    /**
+     * 侧边栏统计徽章（对齐参考项目 layouts/app.blade.php 的研发口径）。
+     * 返回 null 表示该菜单不显示徽章；0 值也返回 0，由视图决定是否隐藏。
+     */
+    private function badge(string $name, Authenticatable $user): ?int
+    {
+        $userId = (int) $user->getAuthIdentifier();
+
+        $value = match ($name) {
+            '研发项目', '我的项目列表' => RndProject::mine($userId)->count(),
+            '我的任务' => $this->pendingExecutionCount($userId) + $this->pendingAuditCount($userId),
+            '文档上传' => $this->pendingExecutionCount($userId),
+            '待审核任务' => $this->pendingAuditCount($userId),
+            '文档审核' => RndProjectDocument::withoutGlobalScopes()
+                ->where('audit_status', 'pending')
+                ->whereHas('task', fn ($q) => $q->where('auditor_id', $userId))
+                ->count(),
+            '我的待办' => \App\Models\Office\TodoItem::query()
+                ->where('user_id', $userId)
+                ->where('is_finished', false)
+                ->count(),
+            default => null,
+        };
+
+        return $value;
+    }
+
+    private function pendingExecutionCount(int $userId): int
+    {
+        return RndProjectTask::query()
+            ->where('executor_id', $userId)
+            ->whereIn('status', ['pending', 'overdue', 'rejected'])
+            // 侧边栏渲染时 DataScopeService 会反过来调用 NavigationService，必须绕开全局范围避免递归
+            ->whereHas('project', fn ($q) => $q->withoutGlobalScope('data_scope')->where('status', '!=', 'suspended'))
+            ->count();
+    }
+
+    private function pendingAuditCount(int $userId): int
+    {
+        return RndProjectTask::query()
+            ->where('auditor_id', $userId)
+            ->whereIn('status', ['submitted', 'overdue'])
+            ->whereHas('project', fn ($q) => $q->withoutGlobalScope('data_scope')->where('status', '!=', 'suspended'))
+            ->count();
     }
 
     /**

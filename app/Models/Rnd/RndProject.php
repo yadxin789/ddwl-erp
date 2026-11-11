@@ -66,7 +66,8 @@ class RndProject extends Model
     }
 
     /**
-     * "我的项目"统一口径：我创建的 + 我是任务执行人的（与 WorkspaceController::myProjects 一致）
+     * "我的项目"统一口径：我创建的 + 我是任务执行人的 + 我是任务审核人的
+     * （与参考项目 myProjects 的“创建 ∪ 执行 ∪ 审核”一致，WorkspaceController 共用）。
      */
     public function scopeMine($query, ?int $userId = null)
     {
@@ -75,7 +76,8 @@ class RndProject extends Model
         return $query->withoutGlobalScope('data_scope')
             ->where(function ($q) use ($userId) {
                 $q->where('creator_id', $userId)
-                    ->orWhereHas('tasks', fn ($t) => $t->where('executor_id', $userId));
+                    ->orWhereHas('tasks', fn ($t) => $t->where('executor_id', $userId))
+                    ->orWhereHas('tasks', fn ($t) => $t->where('auditor_id', $userId));
             });
     }
 }

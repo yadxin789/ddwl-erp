@@ -22,8 +22,12 @@ class RndController extends Controller
 
     public function projects()
     {
-        // P0-05：列表口径 = 我创建的 + 我是执行人的项目（与 workspace/my-projects 一致）
-        $projects = RndProject::mine()->with('creator')->orderByDesc('id')->paginate(15);
+        $user = auth()->user();
+
+        // 研发经理（项目监督人）看全部；其他人只看“我创建 / 我执行 / 我审核”的项目
+        $projects = $this->isProjectManager($user)
+            ? RndProject::withoutGlobalScope('data_scope')->with('creator')->orderByDesc('id')->paginate(15)
+            : RndProject::mine()->with('creator')->orderByDesc('id')->paginate(15);
 
         return view('rnd.projects', compact('projects'));
     }
@@ -61,20 +65,27 @@ class RndController extends Controller
             ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'label' => $u->identity_label])->values()->all())
             ->all();
 
+        // 审核人只能是各部门经理：按 departments.manager_id / 岗位数据范围识别
+        $auditorsByDept = [];
         $defaultExecutors = [];
         $defaultAuditors = [];
         foreach ($departments as $dept) {
             $first = $users->firstWhere('department_id', $dept->id);
             if ($first) {
                 $defaultExecutors[$dept->id] = (int) $first->id;
-                $defaultAuditors[$dept->id] = (int) $first->id;
+            }
+
+            $manager = $dept->resolvedManager();
+            if ($manager) {
+                $auditorsByDept[$dept->id] = [['id' => (int) $manager->id, 'label' => $manager->identity_label]];
+                $defaultAuditors[$dept->id] = (int) $manager->id;
             }
         }
 
         $templates = ProjectTemplate::orderBy('name')->get();
 
         return view('rnd.project-create', compact(
-            'taskTypes', 'templates', 'departments', 'usersByDept', 'defaultExecutors', 'defaultAuditors'
+            'taskTypes', 'templates', 'departments', 'usersByDept', 'auditorsByDept', 'defaultExecutors', 'defaultAuditors'
         ));
     }
 
@@ -117,6 +128,7 @@ class RndController extends Controller
         $selectedDepts = array_map('intval', $data['selected_depts']);
         $tasksByDept = [];
         $errors = [];
+        $managerCache = [];
 
         foreach ($data['tasks'] as $index => $task) {
             $deptId = (int) $task['department_id'];
@@ -126,11 +138,27 @@ class RndController extends Controller
             if (! in_array($deptId, $selectedDepts, true) || ! $enabled) {
                 continue;
             }
+            $label = '任务「' . (($task['name'] ?? '') ?: '未命名') . '」';
+
             if (empty($task['executor_id'])) {
-                $errors["tasks.{$index}.executor_id"] = '任务「' . (($task['name'] ?? '') ?: '未命名') . '」需要选择执行人';
+                $errors["tasks.{$index}.executor_id"] = $label . '需要选择执行人';
             }
             if (empty($task['auditor_id'])) {
-                $errors["tasks.{$index}.auditor_id"] = '任务「' . (($task['name'] ?? '') ?: '未命名') . '」需要选择审核人';
+                $errors["tasks.{$index}.auditor_id"] = $label . '需要选择审核人';
+            }
+
+            // 审核人必须是任务所属部门的部门经理（参考项目 task_auditor = 原主管岗位）
+            $manager = $managerCache[$deptId] ??= Department::find($deptId)?->resolvedManager();
+            if (! $manager) {
+                $errors["tasks.{$index}.auditor_id"] = $label . '所属部门未配置部门经理，无法指定审核人';
+            } elseif (! empty($task['auditor_id']) && (int) $task['auditor_id'] !== (int) $manager->id) {
+                $deptName = Department::find($deptId)?->dept_name ?? ('部门#' . $deptId);
+                $errors["tasks.{$index}.auditor_id"] = $label . '的审核人必须是「' . $deptName . '」部门经理（' . $manager->identity_label . '）';
+            }
+
+            if (! empty($task['executor_id']) && ! empty($task['auditor_id'])
+                && (int) $task['executor_id'] === (int) $task['auditor_id']) {
+                $errors["tasks.{$index}.auditor_id"] = $label . '的审核人不能是执行人本人';
             }
 
             $tasksByDept[$deptId][] = $task;
@@ -143,7 +171,11 @@ class RndController extends Controller
             return back()->withErrors(['tasks' => '请至少启用一个属于已选部门的任务'])->withInput();
         }
 
-        $project = $this->service->createProject($data, $tasksByDept, $selectedDepts, $data['dept_days']);
+        try {
+            $project = $this->service->createProject($data, $tasksByDept, $selectedDepts, $data['dept_days']);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['tasks' => $e->getMessage()])->withInput();
+        }
 
         return redirect()->route('rnd.projects.show', $project)->with('success', "项目 {$project->project_code} 已创建。");
     }
@@ -161,12 +193,21 @@ class RndController extends Controller
             ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'label' => $u->identity_label])->values()->all())
             ->all();
 
+        // 审核人只能是各部门经理（与创建页同口径）
+        $auditorsByDept = [];
         $defaultExecutors = [];
         $defaultAuditors = [];
-        foreach ($usersByDept as $deptId => $group) {
-            if ($deptId && ! empty($group)) {
-                $defaultExecutors[$deptId] = $group[0]['id'];
-                $defaultAuditors[$deptId] = $group[0]['id'];
+        $taskDeptIds = $taskTypes->pluck('department_id')->filter()->unique()->all();
+        foreach (Department::whereIn('id', $taskDeptIds)->orderBy('sort_order')->get() as $dept) {
+            $first = $users->firstWhere('department_id', $dept->id);
+            if ($first) {
+                $defaultExecutors[$dept->id] = (int) $first->id;
+            }
+
+            $manager = $dept->resolvedManager();
+            if ($manager) {
+                $auditorsByDept[$dept->id] = [['id' => (int) $manager->id, 'label' => $manager->identity_label]];
+                $defaultAuditors[$dept->id] = (int) $manager->id;
             }
         }
 
@@ -181,7 +222,7 @@ class RndController extends Controller
         $boms = \App\Models\Bom\BomHeader::orderByDesc('id')->limit(50)->get();
 
         return view('rnd.project-show', compact(
-            'project', 'taskTypes', 'usersByDept', 'defaultExecutors', 'defaultAuditors', 'baseline', 'ecrs', 'boms'
+            'project', 'taskTypes', 'usersByDept', 'auditorsByDept', 'defaultExecutors', 'defaultAuditors', 'baseline', 'ecrs', 'boms'
         ));
     }
 
@@ -311,11 +352,37 @@ class RndController extends Controller
             'name' => ['nullable', 'string', 'max:128'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'executor_id' => ['required', 'exists:users,id'],
-            'auditor_id' => ['nullable', 'exists:users,id'],
+            'auditor_id' => ['required', 'exists:users,id'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['required', 'date'],
+        ], [
+            'auditor_id.required' => '请选择部门经理担任审核人',
         ]);
-        $this->service->addTask($project->id, $data);
+
+        $type = RndTaskType::find($data['task_type_id']);
+        $deptId = (int) ($data['department_id'] ?? $type?->department_id ?? 0);
+        $dept = $deptId ? Department::find($deptId) : null;
+        $manager = $dept?->resolvedManager();
+
+        if (! $manager) {
+            return back()->withErrors(['auditor_id' => '任务所属部门未配置部门经理，无法指定审核人']);
+        }
+        if ((int) $data['auditor_id'] !== (int) $manager->id) {
+            return back()->withErrors([
+                'auditor_id' => '审核人必须是「' . ($dept->dept_name ?? '任务所属部门') . '」部门经理（' . $manager->identity_label . '）',
+            ])->withInput();
+        }
+        if ((int) $data['executor_id'] === (int) $data['auditor_id']) {
+            return back()->withErrors(['auditor_id' => '审核人不能是执行人本人'])->withInput();
+        }
+
+        $data['department_id'] = $deptId;
+
+        try {
+            $this->service->addTask($project->id, $data);
+        } catch (\DomainException $e) {
+            return back()->withErrors(['auditor_id' => $e->getMessage()])->withInput();
+        }
 
         return back()->with('success', '任务已分配，已通知执行人。');
     }
@@ -382,14 +449,17 @@ class RndController extends Controller
     }
 
     /**
-     * 交付物审核台：全部待审文档（审核权 rnd.approve 持有者才可进）。
-     * 用 withoutGlobalScopes 越过"本人=上传人"的行级范围，否则审核人看不到别人的交付物。
+     * 交付物审核台：只列“我是该任务审核人”的待审文档。
+     * 只有部门经理会被指派为任务审核人，因此这里天然只显示各部门经理自己的待审任务。
      */
     public function documentReview()
     {
+        $userId = (int) auth()->id();
+
         $documents = RndProjectDocument::withoutGlobalScopes()
             ->with(['project', 'task.taskType', 'task.executor', 'file', 'uploader'])
             ->where('audit_status', 'pending')
+            ->whereHas('task', fn ($q) => $q->where('auditor_id', $userId))
             ->orderBy('created_at')
             ->paginate(20);
 
@@ -407,6 +477,9 @@ class RndController extends Controller
     /* ---------- 延期申请 ---------- */
     public function extensionStore(Request $request, RndProjectTask $task)
     {
+        // 只有该任务执行人（或项目创建人/研发经理）能申请延期
+        $this->authorize('execute', $task);
+
         $data = $request->validate([
             'apply_days' => ['required', 'integer', 'min:1', 'max:90'],
             'reason' => ['required', 'string', 'max:500'],
@@ -426,5 +499,12 @@ class RndController extends Controller
         return back()->with('success', $instance
             ? "延期 {$data['apply_days']} 天申请已提交，等待研发经理审批（审批通过后自动顺延）。"
             : "延期 {$data['apply_days']} 天申请已提交，等待审批。");
+    }
+
+    /** 项目监督人（研发经理）与系统管理员可见全部项目；其余按“创建/执行/审核”口径 */
+    private function isProjectManager(?User $user): bool
+    {
+        return $user
+            && ($user->hasRole('role_rnd_manager') || $user->hasRole('role_sys_admin'));
     }
 }

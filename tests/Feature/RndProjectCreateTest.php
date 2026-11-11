@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Organization\Department;
 use App\Models\Organization\User;
 use App\Models\Rnd\ProjectTemplate;
 use App\Models\Rnd\RndProject;
@@ -27,13 +28,67 @@ class RndProjectCreateTest extends TestCase
         DB::beginTransaction();
 
         $this->manager = User::where('username', '王明')->firstOrFail();
-        $this->auditor = User::where('username', '韩磊')->firstOrFail();
+        $this->auditor = User::where('username', '王明')->firstOrFail();
     }
 
     protected function tearDown(): void
     {
         DB::rollBack();
         parent::tearDown();
+    }
+
+    private function auditorFor(int $deptId): User
+    {
+        $manager = Department::findOrFail($deptId)->resolvedManager();
+        $this->assertNotNull($manager, '测试前置：部门必须有部门经理');
+
+        return $manager;
+    }
+
+    public function test_project_store_rejects_auditor_who_is_not_department_manager(): void
+    {
+        $this->actingAs($this->manager);
+
+        $type = RndTaskType::whereNotNull('department_id')->orderBy('sort_order')->firstOrFail();
+        $deptId = (int) $type->department_id;
+
+        $this->post(route('rnd.projects.store'), [
+            'project_name' => '审核人越权项目',
+            'start_date' => now()->toDateString(),
+            'selected_depts' => [$deptId],
+            'dept_days' => [$deptId => 5],
+            'tasks' => [[
+                'task_type_id' => $type->id,
+                'name' => '越权审核任务',
+                'department_id' => $deptId,
+                'enabled' => '1',
+                'executor_id' => $this->manager->id,
+                'auditor_id' => User::where('username', '韩磊')->firstOrFail()->id,
+            ]],
+        ])->assertSessionHasErrors('tasks.0.auditor_id');
+
+        $this->assertDatabaseMissing('rnd_projects', ['project_name' => '审核人越权项目']);
+    }
+
+    public function test_create_page_auditor_candidates_are_only_department_managers(): void
+    {
+        $this->actingAs($this->manager);
+
+        $response = $this->get(route('rnd.projects.create'))->assertOk();
+
+        $auditorsByDept = $response->viewData('auditorsByDept');
+        $this->assertNotEmpty($auditorsByDept);
+
+        foreach ($auditorsByDept as $deptId => $candidates) {
+            $manager = Department::findOrFail($deptId)->resolvedManager();
+            $this->assertCount(1, $candidates, '每个部门只应有 1 名审核人候选');
+            $this->assertSame((int) $manager->id, (int) $candidates[0]['id']);
+        }
+
+        // 工程师不能出现在审核人候选里（只用于执行人下拉）
+        $auditorIds = collect($auditorsByDept)->flatten(1)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $this->assertNotContains((int) User::where('username', '韩磊')->firstOrFail()->id, $auditorIds);
+        $this->assertNotContains((int) User::where('username', '孙八')->firstOrFail()->id, $auditorIds);
     }
 
     public function test_create_page_renders_with_reference_sections(): void
@@ -82,7 +137,7 @@ class RndProjectCreateTest extends TestCase
                     'department_id' => $deptId,
                     'enabled' => '1',
                     'executor_id' => $this->manager->id,
-                    'auditor_id' => $this->auditor->id,
+                    'auditor_id' => $this->auditorFor($deptId)->id,
                 ],
             ],
         ]);
@@ -117,7 +172,7 @@ class RndProjectCreateTest extends TestCase
             'department_id' => $deptId,
             'enabled' => '1',
             'executor_id' => $this->manager->id,
-            'auditor_id' => $this->auditor->id,
+            'auditor_id' => $this->auditorFor($deptId)->id,
         ];
 
         $this->post(route('rnd.projects.store'), [
@@ -149,7 +204,7 @@ class RndProjectCreateTest extends TestCase
             'department_id' => $deptId,
             'enabled' => '1',
             'executor_id' => $this->manager->id,
-            'auditor_id' => $this->auditor->id,
+            'auditor_id' => $this->auditorFor($deptId)->id,
         ];
 
         $this->post(route('project.templates.store'), [
@@ -219,7 +274,7 @@ class RndProjectCreateTest extends TestCase
                 'department_id' => $deptId,
                 'enabled' => '1',
                 'executor_id' => $this->manager->id,
-                'auditor_id' => $this->auditor->id,
+                'auditor_id' => $this->auditorFor($deptId)->id,
             ]],
         ])->assertRedirect(route('project.templates'));
 
@@ -250,7 +305,7 @@ class RndProjectCreateTest extends TestCase
                     'department_id' => $deptId,
                     'enabled' => '1',
                     'executor_id' => $this->manager->id,
-                    'auditor_id' => $this->auditor->id,
+                    'auditor_id' => $this->auditorFor($deptId)->id,
                 ],
             ],
         ])->assertRedirect(route('project.templates'));
@@ -282,7 +337,7 @@ class RndProjectCreateTest extends TestCase
             'department_id' => $deptId,
             'enabled' => '1',
             'executor_id' => $this->manager->id,
-            'auditor_id' => $this->auditor->id,
+            'auditor_id' => $this->auditorFor($deptId)->id,
         ];
 
         $this->post(route('project.templates.store'), [
@@ -316,3 +371,4 @@ class RndProjectCreateTest extends TestCase
         $this->assertSame(['电源原理图', '主控原理图'], $names);
     }
 }
+

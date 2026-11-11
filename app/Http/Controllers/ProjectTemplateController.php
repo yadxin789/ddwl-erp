@@ -127,21 +127,34 @@ class ProjectTemplateController extends Controller
             }
             $selectedDepts[$deptId] = $deptId;
             $deptDays[$deptId] = (int) ($config['days'] ?? 5);
+
+            // 模板可能来自旧数据：审核人统一归口到当前部门经理，保证“只有部门经理能审”
+            $manager = Department::find($deptId)?->resolvedManager();
+            $executorId = $config['executor_id'] ?? $defaultExecutor;
+            $auditorId = $config['auditor_id'] ?? null;
+            if ($manager && (! $auditorId || (int) $auditorId !== (int) $manager->id)) {
+                $auditorId = (int) $manager->id;
+            }
+
             $tasksByDept[$deptId][] = [
                 'task_type_id' => (int) $type->id,
                 'name' => $config['name'] ?? $type->name,
                 'department_id' => $deptId,
-                'executor_id' => $config['executor_id'] ?? $defaultExecutor,
-                'auditor_id' => $config['auditor_id'] ?? null,
+                'executor_id' => $executorId,
+                'auditor_id' => $auditorId,
             ];
         }
 
-        $project = $this->service->createProject(
-            $data + ['version' => 'V1.0'],
-            $tasksByDept,
-            array_values($selectedDepts),
-            $deptDays
-        );
+        try {
+            $project = $this->service->createProject(
+                $data + ['version' => 'V1.0'],
+                $tasksByDept,
+                array_values($selectedDepts),
+                $deptDays
+            );
+        } catch (\DomainException $e) {
+            return back()->withErrors(['tasks' => $e->getMessage()])->withInput();
+        }
 
         return redirect()->route('rnd.projects.show', $project)->with('success', '项目已按模板创建，任务已生成。');
     }
@@ -176,17 +189,24 @@ class ProjectTemplateController extends Controller
             ->map(fn ($group) => $group->map(fn ($u) => ['id' => (int) $u->id, 'label' => $u->identity_label])->values()->all())
             ->all();
 
+        // 审核人只能是各部门经理（与项目创建页同口径）
+        $auditorsByDept = [];
         $defaultExecutors = [];
         $defaultAuditors = [];
         foreach ($departments as $dept) {
             $first = $users->firstWhere('department_id', $dept->id);
             if ($first) {
                 $defaultExecutors[$dept->id] = (int) $first->id;
-                $defaultAuditors[$dept->id] = (int) $first->id;
+            }
+
+            $manager = $dept->resolvedManager();
+            if ($manager) {
+                $auditorsByDept[$dept->id] = [['id' => (int) $manager->id, 'label' => $manager->identity_label]];
+                $defaultAuditors[$dept->id] = (int) $manager->id;
             }
         }
 
-        return compact('taskTypes', 'departments', 'usersByDept', 'defaultExecutors', 'defaultAuditors');
+        return compact('taskTypes', 'departments', 'usersByDept', 'auditorsByDept', 'defaultExecutors', 'defaultAuditors');
     }
 
     /** 校验并组装 steps，创建与保存共用 */
@@ -231,6 +251,19 @@ class ProjectTemplateController extends Controller
                 }
                 if (empty($task['auditor_id'])) {
                     $errors["tasks.{$index}.auditor_id"] = '任务「' . (($task['name'] ?? '') ?: '未命名') . '」需要选择审核人';
+                }
+
+                $dept = Department::find($deptId);
+                $manager = $dept?->resolvedManager();
+                if (! $manager) {
+                    $errors["tasks.{$index}.auditor_id"] = '任务「' . (($task['name'] ?? '') ?: '未命名') . '」所属部门未配置部门经理';
+                } elseif (! empty($task['auditor_id']) && (int) $task['auditor_id'] !== (int) $manager->id) {
+                    $errors["tasks.{$index}.auditor_id"] = '任务「' . (($task['name'] ?? '') ?: '未命名')
+                        . '」的审核人必须是「' . ($dept->dept_name ?? '任务所属部门') . '」部门经理（' . $manager->identity_label . '）';
+                }
+                if (! empty($task['executor_id']) && ! empty($task['auditor_id'])
+                    && (int) $task['executor_id'] === (int) $task['auditor_id']) {
+                    $errors["tasks.{$index}.auditor_id"] = '任务「' . (($task['name'] ?? '') ?: '未命名') . '」的审核人不能是执行人本人';
                 }
 
                 $steps[] = [

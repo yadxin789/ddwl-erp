@@ -38,7 +38,8 @@ class RndAuthorizationTest extends TestCase
 
         $this->creator = User::where('username', '王明')->firstOrFail();
         $this->executor = User::where('username', '孙八')->firstOrFail();
-        $this->auditor = User::where('username', '韩磊')->firstOrFail();
+        // 销售部经理（部门经理，有权审核研发任务；不是项目创建人）
+        $this->auditor = User::where('username', '罗娟')->firstOrFail();
         $this->outsider = User::where('username', '唐斌')->firstOrFail();
 
         $this->project = RndProject::create([
@@ -49,14 +50,13 @@ class RndAuthorizationTest extends TestCase
             'progress' => 0,
         ]);
 
-        $type = RndTaskType::firstOrCreate(
-            ['name' => 'P0-05 测试任务类型'],
-            ['description' => '测试用', 'is_required' => false, 'sort_order' => 999]
-        );
+        // 市场调研报告属于销售部（D-SAL），审核人只能是销售部经理
+        $type = RndTaskType::where('name', '市场调研报告')->firstOrFail();
 
         $this->task = RndProjectTask::create([
             'project_id' => $this->project->id,
             'task_type_id' => $type->id,
+            'department_id' => $type->department_id,
             'executor_id' => $this->executor->id,
             'auditor_id' => $this->auditor->id,
             'end_date' => now()->addDays(7)->toDateString(),
@@ -96,7 +96,9 @@ class RndAuthorizationTest extends TestCase
         $this->get("/rnd/projects/{$this->project->id}")->assertStatus(403);
         $this->post("/rnd/projects/{$this->project->id}/tasks", [
             'task_type_id' => $this->task->task_type_id,
-            'executor_id' => $this->outsider->id,
+            'department_id' => $this->task->department_id,
+            'executor_id' => $this->executor->id,
+            'auditor_id' => $this->auditor->id,
             'end_date' => now()->addDays(3)->toDateString(),
         ])->assertStatus(403);
     }
@@ -109,7 +111,9 @@ class RndAuthorizationTest extends TestCase
         // 执行人不是创建人：不能派任务
         $this->post("/rnd/projects/{$this->project->id}/tasks", [
             'task_type_id' => $this->task->task_type_id,
+            'department_id' => $this->task->department_id,
             'executor_id' => $this->executor->id,
+            'auditor_id' => $this->auditor->id,
             'end_date' => now()->addDays(3)->toDateString(),
         ])->assertStatus(403);
 
@@ -117,9 +121,21 @@ class RndAuthorizationTest extends TestCase
         $this->get("/rnd/projects/{$this->project->id}")->assertStatus(200);
         $this->post("/rnd/projects/{$this->project->id}/tasks", [
             'task_type_id' => $this->task->task_type_id,
+            'department_id' => $this->task->department_id,
             'executor_id' => $this->executor->id,
+            'auditor_id' => $this->auditor->id,
             'end_date' => now()->addDays(3)->toDateString(),
-        ])->assertStatus(302);
+        ])->assertStatus(302)->assertSessionHasNoErrors();
+    }
+
+    public function test_only_project_manager_can_open_create_project_page(): void
+    {
+        $this->actingAs($this->creator);
+        $this->get(route('rnd.projects.create'))->assertOk();
+
+        $this->actingAs($this->executor);
+        $this->get(route('rnd.projects.create'))->assertStatus(403);
+        $this->post(route('rnd.projects.store'), ['project_name' => '越权创建'])->assertStatus(403);
     }
 
     public function test_only_task_executor_can_upload_document(): void
@@ -132,10 +148,11 @@ class RndAuthorizationTest extends TestCase
         $this->post("/rnd/tasks/{$this->task->id}/documents")->assertStatus(403);
     }
 
-    public function test_only_auditor_or_manager_can_audit_document(): void
+    public function test_only_designated_department_manager_can_audit_document(): void
     {
-        $this->assertTrue(Gate::forUser($this->auditor)->allows('audit', $this->document), '指定审核人可判定');
-        $this->assertTrue(Gate::forUser($this->creator)->allows('audit', $this->document), '研发经理可兜底判定');
+        $this->assertTrue(Gate::forUser($this->auditor)->allows('audit', $this->document), '指定部门经理可判定');
+        $this->assertFalse(Gate::forUser($this->creator)->allows('audit', $this->document), '项目创建人不能代替部门经理审核');
+        $this->assertFalse(Gate::forUser($this->executor)->allows('audit', $this->document), '执行人不能审自己的交付物');
         $this->assertFalse(Gate::forUser($this->outsider)->allows('audit', $this->document));
 
         // 审核人不是上传人：控制器自己取单据（不信路由绑定）后授权通过
@@ -146,6 +163,13 @@ class RndAuthorizationTest extends TestCase
         // 非参与者：同一路由应 403
         $this->actingAs($this->outsider);
         $this->post("/rnd/documents/{$this->document->id}/audit", ['pass' => true])->assertStatus(403);
+    }
+
+    public function test_project_manager_cannot_decide_task_as_auditor(): void
+    {
+        $this->assertFalse(Gate::forUser($this->creator)->allows('decide', $this->task), '研发经理不能代替部门经理审任务');
+        $this->assertFalse(Gate::forUser($this->executor)->allows('decide', $this->task), '执行人不能自审');
+        $this->assertTrue(Gate::forUser($this->auditor)->allows('decide', $this->task));
     }
 
     public function test_project_list_uses_mine_scope(): void
