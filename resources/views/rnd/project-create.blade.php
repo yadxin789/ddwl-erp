@@ -90,24 +90,6 @@
                 <div class="text-muted">暂无可用部门，请先在任务类型中维护部门归属。</div>
             @endforelse
         </div>
-        <div class="card-body border-top">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label mb-1" for="addDeptSelect">添加部门</label>
-                    <select id="addDeptSelect" class="form-select form-select-sm">
-                        <option value="">请选择部门</option>
-                    </select>
-                </div>
-                <div class="col-auto">
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addDepartment()">
-                        <i class="fa fa-plus me-1"></i>添加部门
-                    </button>
-                </div>
-                <div class="col">
-                    <div class="form-text mb-0">只显示任务类型字典中尚未加入的部门；添加后会把该部门全部任务类型追加到下方任务配置。</div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <div class="card mb-3">
@@ -249,7 +231,6 @@
     const defaultExecutors = @json($defaultExecutors);
     const defaultAuditors = @json($defaultAuditors);
     const deptOrder = @json($deptOrder);
-    const deptNames = @json($deptNames, JSON_UNESCAPED_UNICODE);
     let taskIndexSeed = {{ $taskTypes->count() }};
 
     function getSelectedDepts() {
@@ -257,61 +238,6 @@
             const checkbox = document.querySelector('.dept-checkbox[data-dept-id="' + deptId + '"]');
             return checkbox && checkbox.checked;
         });
-    }
-
-    /** 下拉只列出“任务类型字典中存在、但尚未加入”的部门 */
-    function refreshAddDeptOptions() {
-        const select = document.getElementById('addDeptSelect');
-        if (!select) return;
-
-        const current = select.value;
-        select.innerHTML = '<option value="">请选择部门</option>';
-        const selected = getSelectedDepts();
-        const available = deptOrder.filter(function (deptId) {
-            return selected.indexOf(deptId) === -1;
-        });
-
-        if (!available.length) {
-            select.appendChild(new Option('暂无可添加部门（已在列表中）', ''));
-            select.disabled = true;
-            return;
-        }
-
-        select.disabled = false;
-        available.forEach(function (deptId) {
-            select.appendChild(new Option(deptNames[deptId] || ('部门#' + deptId), deptId));
-        });
-        if (available.map(String).indexOf(current) !== -1) {
-            select.value = current;
-        }
-    }
-
-    /** 加入部门：勾选部门，并把该部门全部任务类型追加到任务配置末尾 */
-    function addDepartment() {
-        const select = document.getElementById('addDeptSelect');
-        const deptId = parseInt(select ? select.value : '0', 10);
-        if (!deptId) return;
-
-        const checkbox = document.querySelector('.dept-checkbox[data-dept-id="' + deptId + '"]');
-        if (!checkbox) return;
-        checkbox.checked = true;
-
-        const tbody = document.getElementById('taskBody');
-        taskRows()
-            .filter(function (row) { return parseInt(row.dataset.deptId || '0', 10) === deptId; })
-            .forEach(function (row) {
-                if (row.dataset.required === '1') {
-                    const enabled = row.querySelector('.task-enabled');
-                    if (enabled) enabled.checked = true;
-                    row.classList.remove('table-secondary');
-                }
-                tbody.appendChild(row);
-            });
-
-        onDeptSelectionChange();
-
-        const firstRow = tbody.querySelector('.task-row[data-dept-id="' + deptId + '"]');
-        if (firstRow) firstRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
 
     function isTaskEnabled(row) {
@@ -333,7 +259,6 @@
             row.style.display = visible ? '' : 'none';
         });
         calculateTaskDates();
-        refreshAddDeptOptions();
     }
 
     function taskRows() {

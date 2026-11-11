@@ -157,8 +157,6 @@ class RndProjectCreateTest extends TestCase
         $this->get(route('rnd.projects.create'))
             ->assertOk()
             ->assertSee('选择参与部门')
-            ->assertSee('添加部门')
-            ->assertSee('addDeptSelect', false)
             ->assertSee('部门天数配置')
             ->assertSee('任务配置')
             ->assertSee('任务名称')
@@ -172,8 +170,6 @@ class RndProjectCreateTest extends TestCase
         $this->get(route('project.templates.create'))
             ->assertOk()
             ->assertSee('创建新研发项目模板')
-            ->assertSee('添加部门')
-            ->assertSee('addDeptSelect', false)
             ->assertSee('任务名称')
             ->assertSee('"label":"王明"', false);
     }
