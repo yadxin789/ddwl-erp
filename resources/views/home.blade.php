@@ -22,9 +22,9 @@
 <div class="row g-3">
     @forelse ($dashboard['cards'] as $card)
         <div class="col-sm-6 col-xl-3">
-            <div class="card h-100"><div class="card-body d-flex align-items-center gap-3">
-                <div class="bg-{{ $card['color'] }} bg-opacity-10 text-{{ $card['color'] }} rounded-3 p-3">
-                    <i class="fa-solid {{ $card['icon'] }} fa-xl"></i>
+            <div class="card metric-card h-100"><div class="card-body d-flex align-items-center gap-3">
+                <div class="metric-icon bg-{{ $card['color'] }} bg-opacity-10 text-{{ $card['color'] }}">
+                    <i class="fa-solid {{ $card['icon'] }} fa-lg"></i>
                 </div>
                 <div>
                     <div class="text-muted small">{{ $card['label'] }}</div>
@@ -45,6 +45,11 @@
         <div class="col-12"><div class="card"><div class="card-body text-muted">本岗暂未配置指标。</div></div></div>
     @endforelse
 </div>
+
+@include('partials.dashboard-charts', [
+    'charts' => $dashboard['charts'],
+    'cards' => $dashboard['cards'],
+])
 
 @if (! empty($dashboard['quick_links']))
 <div class="card mt-3">

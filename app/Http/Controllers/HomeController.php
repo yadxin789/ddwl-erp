@@ -20,10 +20,12 @@ class HomeController extends Controller
      */
     public function exec(DashboardService $dashboard)
     {
-        $cards = $dashboard->cardsForKeys([
+        $keys = [
             'open_orders', 'open_pos', 'open_wos', 'pending_qc',
             'ar_total', 'ap_total', 'stock_qty', 'materials',
-        ]);
+        ];
+        $cards = $dashboard->cardsForKeys($keys);
+        $charts = $dashboard->chartsForKeys($keys);
 
         $readonlyReports = collect([
             ['name' => '销售分析', 'route' => 'report.sales'],
@@ -33,6 +35,6 @@ class HomeController extends Controller
             ['name' => '报表中心', 'route' => 'report.center'],
         ])->filter(fn ($item) => Route::has($item['route']))->values();
 
-        return view('dashboard.exec', compact('cards', 'readonlyReports'));
+        return view('dashboard.exec', compact('cards', 'readonlyReports', 'charts'));
     }
 }

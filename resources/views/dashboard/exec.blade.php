@@ -10,7 +10,7 @@
 <div class="row g-3">
     @foreach ($cards as $card)
         <div class="col-sm-6 col-xl-3">
-            <div class="card h-100"><div class="card-body">
+            <div class="card metric-card h-100"><div class="card-body">
                 <div class="text-muted small">{{ $card['label'] }}</div>
                 <div class="fs-4 fw-bold">
                     @if (! empty($card['money']))¥{{ number_format((float) $card['value'], 2) }}@else{{ number_format((float) $card['value'], 0) }}@endif
@@ -19,6 +19,8 @@
         </div>
     @endforeach
 </div>
+
+@include('partials.dashboard-charts', ['charts' => $charts, 'cards' => $cards])
 
 <div class="card mt-3"><div class="card-header">下钻报表</div><div class="card-body d-flex flex-wrap gap-2">
     @foreach ($readonlyReports as $report)

@@ -28,6 +28,21 @@ use Spatie\Permission\Models\Role;
  */
 class DashboardService
 {
+    /**
+     * 工作台图表数据源：键与 config/dashboard.php 的指标卡对齐。
+     * 只有本岗配置里出现过的指标，才会去查对应业务表。
+     *
+     * @var array<string, array{label: string, keys: array<int, string>, model: class-string}>
+     */
+    private const CHART_MODULES = [
+        'sales' => ['label' => '销售订单', 'keys' => ['open_orders', 'ar_total'], 'model' => SalesOrder::class],
+        'purchase' => ['label' => '采购订单', 'keys' => ['open_pos', 'ap_total', 'suppliers'], 'model' => PurchaseOrder::class],
+        'production' => ['label' => '生产工单', 'keys' => ['open_wos', 'pending_issue_requests'], 'model' => ProductionOrder::class],
+        'quality' => ['label' => '质检记录', 'keys' => ['pending_qc'], 'model' => InspectionRecord::class],
+        'rnd' => ['label' => '研发项目', 'keys' => ['my_projects'], 'model' => RndProject::class],
+        'ecom' => ['label' => '电商订单', 'keys' => ['ecom_orders'], 'model' => EcomOrder::class],
+    ];
+
     /** @var array<string, callable> */
     private array $resolvers;
 
@@ -144,8 +159,53 @@ class DashboardService
             'department' => $nav['department'],
             'no_position' => $nav['no_position'],
             'cards' => $cards,
+            'charts' => $this->chartsForKeys($keys),
             // 快捷入口复用侧边栏的业务项（已做过权限与路由校验）
             'quick_links' => array_slice($nav['business'], 0, 6),
+        ];
+    }
+
+    /**
+     * 近 6 个月业务量趋势：按本岗可看的模块生成折线序列。
+     * 模型自带的数据范围/租户 scope 继续生效，不会越权聚合。
+     *
+     * @param  array<int, string>  $keys
+     * @return array{months: array<int, string>, series: array<int, array{name: string, data: array<int, int>}>}
+     */
+    public function chartsForKeys(array $keys): array
+    {
+        $months = [];
+        $cursor = now()->startOfMonth()->subMonths(5);
+
+        for ($i = 0; $i < 6; $i++) {
+            $months[] = [
+                'label' => $cursor->format('m月'),
+                'from' => $cursor->copy()->startOfMonth()->toDateTimeString(),
+                'to' => $cursor->copy()->addMonth()->startOfMonth()->toDateTimeString(),
+            ];
+            $cursor->addMonth();
+        }
+
+        $series = [];
+        foreach (self::CHART_MODULES as $module) {
+            if (! array_intersect($module['keys'], $keys)) {
+                continue;
+            }
+
+            $data = [];
+            foreach ($months as $month) {
+                $data[] = $module['model']::query()
+                    ->where('created_at', '>=', $month['from'])
+                    ->where('created_at', '<', $month['to'])
+                    ->count();
+            }
+
+            $series[] = ['name' => $module['label'], 'data' => $data];
+        }
+
+        return [
+            'months' => array_column($months, 'label'),
+            'series' => $series,
         ];
     }
 }

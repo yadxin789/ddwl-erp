@@ -88,6 +88,28 @@ class WorkspacePagesTest extends TestCase
     }
 
     /**
+     * 工作台图表：有本岗业务指标的岗位出现趋势图，没有月度业务数据的岗位不硬造趋势。
+     */
+    public function test_dashboard_charts_follow_position_visibility(): void
+    {
+        $this->actingAsDemo('钱七');
+        $response = $this->get('/');
+        $response->assertStatus(200);
+        $response->assertSee('trendChart');
+        $response->assertSee('mixChart');
+        $response->assertSee('js/echarts.min.js');
+        $response->assertSee('js/erp-charts.js');
+        $response->assertSee('css/v4-shims.min.css');
+
+        // 仓管只有库存/物料数量，没有销售/采购/生产单据趋势
+        $this->actingAsDemo('王五');
+        $response = $this->get('/');
+        $response->assertStatus(200);
+        $response->assertDontSee('trendChart');
+        $response->assertSee('mixChart');
+    }
+
+    /**
      * S6b 报表 / 编制 / 图档 / 公告 / 驾驶舱：按权限开合，管理员看不到业务驾驶舱。
      */
     public function test_report_and_supporting_pages_respect_position_guards(): void

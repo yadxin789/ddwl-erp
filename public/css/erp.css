@@ -12,6 +12,8 @@
 body {
     background: #f1f5f9;
     font-size: .9rem;
+    font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+    color: #334155;
 }
 
 /* ---------- 布局骨架 ---------- */
@@ -146,6 +148,7 @@ body {
 .card {
     border: none;
     box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+    border-radius: .75rem;
 }
 
 .card-header {
@@ -157,6 +160,72 @@ body {
 .table th {
     white-space: nowrap;
 }
+
+.table thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-bottom-color: #e2e8f0;
+}
+
+/* ---------- 徽章 / 标签 ---------- */
+
+.badge {
+    border-radius: 999px;
+    font-weight: 500;
+    letter-spacing: .02em;
+    padding: .34em .68em;
+    vertical-align: middle;
+}
+
+.badge i {
+    margin-right: .25em;
+    opacity: .85;
+}
+
+.badge.bg-light {
+    border: 1px solid #e2e8f0;
+}
+
+/* ---------- 指标卡 ---------- */
+
+.metric-card {
+    transition: transform .2s, box-shadow .2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .1);
+}
+
+.metric-icon {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: .65rem;
+    flex: 0 0 44px;
+}
+
+/* ---------- 图表卡 ---------- */
+
+.chart-card .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.chart-card .card-header small {
+    font-weight: 400;
+    color: #94a3b8;
+}
+
+.chart-box {
+    width: 100%;
+    height: 300px;
+}
+
 
 /* ---------- 下拉菜单 ---------- */
 

@@ -7,6 +7,7 @@
     <title>@yield('title', 'DDWL-ERP 电子厂管理系统')</title>
     <link rel="stylesheet" href="{{ asset('css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/v4-shims.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/erp.css') }}">
 </head>
 <body>
