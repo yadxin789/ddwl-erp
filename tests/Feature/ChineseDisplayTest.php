@@ -48,6 +48,15 @@ class ChineseDisplayTest extends TestCase
             ->assertDontSee('system.user.view');
     }
 
+    public function test_display_text_reads_translation_dictionary(): void
+    {
+        $this->assertSame('工程师', __('display.roles.engineer'));
+        $this->assertSame('物料清单（BOM）', __('display.permission_modules.bom'));
+        $this->assertSame('查看', __('display.permission_actions.view'));
+        $this->assertSame('待处理', __('display.statuses.pending'));
+        $this->assertSame('原材料', __('display.types.raw_material'));
+    }
+
     public function test_display_text_maps_codes_to_chinese(): void
     {
         $this->assertSame('研发经理', DisplayText::role('role_rnd_manager'));
@@ -56,5 +65,6 @@ class ChineseDisplayTest extends TestCase
         $this->assertSame('待处理', DisplayText::status('pending'));
         $this->assertSame('原材料', DisplayText::type('raw_material'));
         $this->assertSame('来料检验（IQC）', DisplayText::stage('IQC'));
+        $this->assertSame('custom_role_code', DisplayText::role('custom_role_code'));
     }
 }

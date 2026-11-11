@@ -3,266 +3,45 @@
 namespace App\Support;
 
 /**
- * 页面显示用中文文案。
+ * 页面显示翻译器。
  *
- * 系统当前是单语言（中文）系统，数据库中的角色名、权限名、状态值等仍是英文代码。
- * 这些代码用于业务判断，不能直接改库；展示时统一经这里转换为中文，
- * 避免用户在页面上看到 engineer / pending / raw_material 之类的英文。
+ * 系统内部仍以英文代码保存角色、权限、状态、类型等值；这些代码同时用于业务判断，
+ * 不能在数据库或业务逻辑中改写。页面渲染前统一经本类查询“英文代码 → 中文词条”
+ * 翻译集（lang/zh_CN/display.php），只改变显示文字，不改变任何存储值。
+ *
+ * 将来扩展多语言时，为对应 locale 增加一份 display.php 即可，视图无需改动。
  */
 class DisplayText
 {
-    /** 角色代码 → 中文角色名 */
-    private const ROLES = [
-        'system_admin' => '系统管理员',
-        'role_sys_admin' => '系统管理员',
-        'warehouse_supervisor' => '仓库主管',
-        'role_wh_supervisor' => '仓库主管',
-        'warehouse_keeper' => '仓管',
-        'role_wh_keeper' => '仓管',
-        'role_wh_receiver' => '收货员',
-        'purchase_specialist' => '采购专员',
-        'role_pur_specialist' => '采购专员',
-        'role_pur_manager' => '采购主管',
-        'sales_specialist' => '销售专员',
-        'role_sal_specialist' => '销售专员',
-        'role_sal_manager' => '销售主管',
-        'role_sal_cs' => '客服',
-        'engineer' => '工程师',
-        'quality_supervisor' => '品质主管',
-        'role_qc_manager' => '品质主管',
-        'role_qc_iqc' => 'IQC 检验员',
-        'role_qc_ipqc' => 'IPQC 检验员',
-        'role_qc_fqc' => 'FQC 检验员',
-        'role_prod_manager' => '生产主管',
-        'role_prod_leader' => '生产组长',
-        'role_prod_operator' => '作业员',
-        'role_rnd_manager' => '研发经理',
-        'role_eng_hw' => '硬件工程师',
-        'role_eng_sw' => '软件工程师',
-        'role_eng_me' => '结构工程师',
-        'role_pkg_designer' => '包装设计师',
-        'role_id_designer' => '外观设计师',
-        'role_fin_accountant' => '会计',
-        'role_fin_cashier' => '出纳',
-        'role_hr_specialist' => '人事专员',
-        'role_adm_manager' => '行政经理',
-        'role_ecom_operator' => '电商运营',
-        'role_ecom_cs' => '电商客服',
-        'role_gm' => '总经理',
-        'role_project_creator' => '项目创建人（兼容）',
-        'role_task_executor' => '项目任务执行人（兼容）',
-        'role_task_auditor' => '项目任务审核人（兼容）',
-        'role_support_staff' => '其他支持人员（兼容）',
-    ];
+    /** @var array<string, array<string, string>> */
+    private static array $entries = [];
 
-    /** 权限模块代码 → 中文 */
-    private const PERMISSION_MODULES = [
-        'admin' => '后台管理',
-        'ai' => 'AI 助手',
-        'announcement' => '公告',
-        'bom' => '物料清单（BOM）',
-        'cost' => '成本',
-        'crm' => '客户关系',
-        'customer' => '客户',
-        'dashboard' => '工作台',
-        'design' => '设计文件',
-        'ecom' => '电商',
-        'ecommerce' => '电商',
-        'file' => '文件',
-        'finance' => '财务',
-        'hr' => '人事',
-        'inventory' => '库存',
-        'marketing' => '营销',
-        'material' => '物料',
-        'procurement' => '采购协同',
-        'product' => '商品',
-        'production' => '生产',
-        'project' => '项目',
-        'purchase' => '采购',
-        'quality' => '质量',
-        'report' => '报表',
-        'rnd' => '研发',
-        'sales' => '销售',
-        'supplier' => '供应商',
-        'support' => '支持',
-        'system' => '系统',
-        'warehouse' => '仓库',
-    ];
+    /**
+     * 读取当前语言的词条分组；当前语言缺少词条时回退中文词条。
+     *
+     * @return array<string, string>
+     */
+    private static function group(string $name): array
+    {
+        if (isset(self::$entries[$name])) {
+            return self::$entries[$name];
+        }
 
-    /** 权限动作/对象代码 → 中文 */
-    private const PERMISSION_ACTIONS = [
-        'view' => '查看',
-        'list' => '列表',
-        'read' => '读取',
-        'create' => '新建',
-        'edit' => '编辑',
-        'delete' => '删除',
-        'import' => '导入',
-        'approve' => '审批',
-        'confirm' => '确认',
-        'ship' => '发货',
-        'return' => '退货',
-        'receive' => '收货',
-        'operate' => '操作',
-        'audit' => '审核',
-        'adjust' => '调整',
-        'request' => '申请',
-        'transaction' => '流水',
-        'manage' => '管理',
-        'execute' => '执行',
-        'report' => '报表',
-        'upload' => '上传',
-        'submit' => '提交',
-        'apply' => '应用',
-        'config' => '配置',
-        'extension' => '延期',
-        'impact' => '影响分析',
-        'inspection' => '检验',
-        'template' => '模板',
-        'defect' => '缺陷',
-        'standard' => '标准',
-        'stocktake' => '盘点',
-        'complete' => '完工',
-        'issue' => '领料',
-        'release' => '下达',
-        'order' => '订单',
-        'receipt' => '收货',
-        'resource' => '资源',
-        'file' => '文件',
-        'self' => '本人',
-        'inspect' => '检验',
-        'arap' => '应收应付',
-        'bank' => '银行',
-        'bill' => '账单',
-        'cashbook' => '现金日记账',
-        'invoice' => '发票',
-        'note' => '票据',
-        'payment' => '付款',
-        'reconcile' => '对账',
-        'salary' => '薪资',
-        'category' => '分类',
-        'mpn' => '制造商料号',
-        'user' => '用户',
-        'role' => '角色',
-        'department' => '部门',
-        'position' => '岗位',
-        'setting' => '设置',
-        'devops' => '运维',
-        'tenant' => '租户',
-        'wecom' => '企业微信',
-        'sync' => '同步',
-        'platform' => '平台',
-        'event' => '事件',
-        'security' => '安全',
-        'approval' => '审批流',
-        'voice' => '语音',
-        'guide' => '指引',
-        'provider' => '服务商',
-        'permission' => '权限',
-        'masterdata' => '基础数据',
-        'finance' => '财务',
-        'quality' => '质量',
-        'sales' => '销售',
-        'supplier' => '供应商',
-        'project' => '项目',
-        'purchase' => '采购',
-        'production' => '生产',
-        'inventory' => '库存',
-        'material' => '物料',
-        'warehouse' => '仓库',
-        'bom' => '物料清单（BOM）',
-        'system' => '系统',
-        'ecommerce' => '电商',
-        'rnd' => '研发',
-    ];
+        $table = trans('display.' . $name);
+        if (! is_array($table)) {
+            $table = trans('display.' . $name, [], 'zh_CN');
+        }
 
-    /** 通用状态代码 → 中文 */
-    private const STATUSES = [
-        'draft' => '草稿',
-        'planned' => '已计划',
-        'requested' => '已申请',
-        'submitted' => '已提交',
-        'assigned' => '已分配',
-        'pending' => '待处理',
-        'pending_qc' => '待质检',
-        'pending_approval' => '待审批',
-        'in_progress' => '进行中',
-        'processing' => '处理中',
-        'confirmed' => '已确认',
-        'approved' => '已批准',
-        'rejected' => '已驳回',
-        'published' => '已发布',
-        'active' => '启用',
-        'inactive' => '停用',
-        'disabled' => '停用',
-        'enabled' => '启用',
-        'completed' => '已完成',
-        'closed' => '已关闭',
-        'cancelled' => '已取消',
-        'canceled' => '已取消',
-        'shipped' => '已发货',
-        'received' => '已收货',
-        'returned' => '已退货',
-        'partial' => '部分完成',
-        'balanced' => '已平衡',
-        'failed' => '失败',
-        'success' => '成功',
-        'running' => '进行中',
-        'paused' => '已暂停',
-        'open' => '待处理',
-        'new' => '新建',
-        'paid' => '已付款',
-        'unpaid' => '未付款',
-        'void' => '已作废',
-        'blocked' => '已冻结',
-        'available' => '可用',
-        'qualified' => '合格',
-        'unqualified' => '不合格',
-        'normal' => '正常',
-        'abnormal' => '异常',
-    ];
+        return self::$entries[$name] = is_array($table) ? $table : [];
+    }
 
-    /** 业务类型代码 → 中文 */
-    private const TYPES = [
-        'raw_material' => '原材料',
-        'semi_finished' => '半成品',
-        'finished_goods' => '成品',
-        'return' => '退货',
-        'blocked' => '冻结',
-        'call' => '电话',
-        'visit' => '拜访',
-        'email' => '邮件',
-        'meeting' => '会议',
-        'wechat' => '微信',
-        'other' => '其他',
-        'bank' => '银行承兑',
-        'commercial' => '商业承兑',
-        'in' => '收入',
-        'out' => '支出',
-        'low' => '低',
-        'medium' => '中',
-        'high' => '高',
-        'critical' => '严重',
-        'urgent' => '紧急',
-        'normal' => '普通',
-        'warning' => '警告',
-        'info' => '提示',
-        'design' => '设计变更',
-        'process' => '工艺变更',
-        'software' => '软件变更',
-        'notice' => '通知',
-        'policy' => '制度',
-        'event' => '活动',
-    ];
-
-    /** 质量检验阶段代码 → 中文 */
-    private const STAGES = [
-        'iqc' => '来料检验（IQC）',
-        'ipqc' => '过程检验（IPQC）',
-        'fqc' => '成品检验（FQC）',
-        'oqc' => '出货检验（OQC）',
-        'first_article' => '首件检验',
-    ];
+    /**
+     * 按英文代码查中文词条；词条不存在时原样返回代码，避免页面空白。
+     */
+    private static function lookup(string $group, string $code): string
+    {
+        return self::group($group)[$code] ?? $code;
+    }
 
     public static function role(?string $name): string
     {
@@ -270,7 +49,7 @@ class DisplayText
             return '未分配';
         }
 
-        return self::ROLES[$name] ?? $name;
+        return self::lookup('roles', $name);
     }
 
     /** 角色代码数组 → 中文、连接 */
@@ -287,15 +66,16 @@ class DisplayText
     /** 权限代码 → 中文（如 system.user.view => 系统·用户查看） */
     public static function permission(string $name): string
     {
+        $actions = self::group('permission_actions');
         $parts = explode('.', $name);
         if (count($parts) === 1) {
-            return self::PERMISSION_ACTIONS[$parts[0]] ?? $parts[0];
+            return $actions[$parts[0]] ?? $parts[0];
         }
 
-        $module = self::PERMISSION_MODULES[$parts[0]] ?? $parts[0];
+        $module = self::lookup('permission_modules', $parts[0]);
         $labels = [];
         foreach (array_slice($parts, 1) as $part) {
-            $labels[] = self::PERMISSION_ACTIONS[$part] ?? $part;
+            $labels[] = $actions[$part] ?? $part;
         }
 
         return $module . '·' . implode('', $labels);
@@ -307,7 +87,7 @@ class DisplayText
             return '其他';
         }
 
-        return self::PERMISSION_MODULES[$key] ?? $key;
+        return self::lookup('permission_modules', $key);
     }
 
     public static function status(?string $value): string
@@ -316,7 +96,7 @@ class DisplayText
             return '-';
         }
 
-        return self::STATUSES[$value] ?? $value;
+        return self::lookup('statuses', $value);
     }
 
     public static function type(?string $value): string
@@ -325,7 +105,7 @@ class DisplayText
             return '-';
         }
 
-        return self::TYPES[$value] ?? $value;
+        return self::lookup('types', $value);
     }
 
     public static function priority(?string $value): string
@@ -344,6 +124,6 @@ class DisplayText
             return '-';
         }
 
-        return self::STAGES[strtolower($value)] ?? $value;
+        return self::lookup('stages', strtolower($value));
     }
 }
