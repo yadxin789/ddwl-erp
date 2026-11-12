@@ -3,6 +3,8 @@
 @section('title', '研发项目详情')
 
 @section('content')
+@include('rnd.partials.project-tabs', ['project' => $project, 'activeTab' => 'overview'])
+
 <div class="card">
     <div class="card-header d-flex justify-content-between">
         <span>{{ $project->project_name }}（{{ $project->project_code }}） 进度 {{ $project->progress }}%</span>

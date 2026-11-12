@@ -21,4 +21,10 @@ class RndExtensionApplication extends Model
     {
         return $this->belongsTo(User::class, 'applicant_id');
     }
+
+    /** 审批人（研发经理，审批流通过后回写） */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approver_id');
+    }
 }

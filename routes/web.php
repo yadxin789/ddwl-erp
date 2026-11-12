@@ -485,11 +485,38 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group
         ->middleware('permission:support.view')->name('support.center');
 
     // 研发项目
-    Route::middleware('permission:rnd.view')->group(function () {
+    // 注意：这里不再用 permission:rnd.view 做入口闸门。任务执行人/审核人可能来自任意岗位（IQC、采购、生产、市场…），
+    // 若按岗位权限卡入口，被指派任务的人就进不来自己的页面。改为登录即可进入，具体可见性由
+    // RndProjectPolicy / RndProjectTaskPolicy 与 scopeMine()（创建 ∪ 执行 ∪ 审核）逐页判定。
+    Route::middleware('auth')->group(function () {
         // P0-06：我的任务（无参入口，替代原指向 rnd.projects.show 的带参映射）
         Route::get('/rnd/my-tasks', [RndController::class, 'myTasks'])->name('rnd.my-tasks');
+        // 任务详情（执行人 / 审核人 / 项目创建人 / 研发经理可见）
+        Route::get('/rnd/tasks/{task}', [RndController::class, 'taskShow'])->whereNumber('task')->name('rnd.tasks.show');
+
+        // P4 项目组内聊天室（仅项目参与人可见）
+        Route::get('/rnd/projects/{project}/chat', [RndController::class, 'chat'])->whereNumber('project')->name('rnd.projects.chat');
+        Route::post('/rnd/projects/{project}/chat', [RndController::class, 'chatSend'])->whereNumber('project')->name('rnd.projects.chat.send');
+        Route::get('/rnd/projects/{project}/chat/feed', [RndController::class, 'chatFeed'])->whereNumber('project')->name('rnd.projects.chat.feed');
+
+        // P5-1 项目组内协同办公（文档）
+        Route::get('/rnd/projects/{project}/collab', [RndController::class, 'collab'])->whereNumber('project')->name('rnd.projects.collab');
+        Route::post('/rnd/projects/{project}/collab', [RndController::class, 'collabStore'])->whereNumber('project')->name('rnd.projects.collab.store');
+        Route::post('/rnd/collab/{doc}/save', [RndController::class, 'collabSave'])->whereNumber('doc')->name('rnd.collab.save');
+
+        // P5-2 项目组内电话会议（WebRTC + DB 信令）
+        Route::get('/rnd/projects/{project}/voice', [RndController::class, 'voice'])->whereNumber('project')->name('rnd.projects.voice');
+        Route::post('/rnd/projects/{project}/voice/start', [RndController::class, 'voiceStart'])->whereNumber('project')->name('rnd.projects.voice.start');
+        Route::post('/rnd/projects/{project}/voice/join', [RndController::class, 'voiceJoin'])->whereNumber('project')->name('rnd.projects.voice.join');
+        Route::get('/rnd/projects/{project}/voice/state', [RndController::class, 'voiceState'])->whereNumber('project')->name('rnd.projects.voice.state');
+        Route::post('/rnd/projects/{project}/voice/signal', [RndController::class, 'voiceSignal'])->whereNumber('project')->name('rnd.projects.voice.signal');
+        Route::post('/rnd/projects/{project}/voice/leave', [RndController::class, 'voiceLeave'])->whereNumber('project')->name('rnd.projects.voice.leave');
+        Route::post('/rnd/projects/{project}/voice/close', [RndController::class, 'voiceClose'])->whereNumber('project')->name('rnd.projects.voice.close');
         Route::get('/rnd/projects', [RndController::class, 'projects'])->name('rnd.projects');
         Route::get('/rnd/projects/{project}', [RndController::class, 'projectShow'])->whereNumber('project')->name('rnd.projects.show');
+        // 项目详情页标签：甘特图 / 项目履历
+        Route::get('/rnd/projects/{project}/gantt', [RndController::class, 'gantt'])->whereNumber('project')->name('rnd.projects.gantt');
+        Route::get('/rnd/projects/{project}/history', [RndController::class, 'history'])->whereNumber('project')->name('rnd.projects.history');
         Route::get('/rnd/task-types', [RndController::class, 'taskTypes'])->name('rnd.task-types');
 
         // 交付物上传台 / 上传 / 任务开始与提交 / 延期申请：执行人、审核人、项目经理都可进入，具体由 Policy 判人
@@ -499,6 +526,8 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group
         Route::post('/rnd/tasks/{task}/start', [RndController::class, 'taskStart'])->whereNumber('task')->name('rnd.tasks.start');
         Route::post('/rnd/tasks/{task}/submit', [RndController::class, 'taskSubmit'])->whereNumber('task')->name('rnd.tasks.submit');
         Route::get('/rnd/projects/{project}/ecr/impact', [RndController::class, 'ecrImpact'])->whereNumber('project')->name('rnd.ecr.impact');
+        // 项目状态四态切换（创建人 / 研发经理 / 管理员，Policy::manage 判人）
+        Route::post('/rnd/projects/{project}/status', [RndController::class, 'projectStatus'])->whereNumber('project')->name('rnd.projects.status');
     });
 
     // 只有项目经理（研发经理）可以新建研发项目（参考项目 ProjectPolicy::create = isProjectCreator||isAdmin）

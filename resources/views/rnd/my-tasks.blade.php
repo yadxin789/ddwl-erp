@@ -62,6 +62,7 @@
                         @endif
                     </td>
                     <td class="d-flex gap-1">
+                        <a href="{{ route('rnd.tasks.show', $task) }}" class="btn btn-sm btn-outline-dark">详情</a>
                         <a href="{{ route('rnd.projects.show', $task->project_id) }}" class="btn btn-sm btn-outline-primary">项目</a>
                         @can('execute', $task)
                             @if (in_array($task->status, ['pending', 'overdue', 'rejected'], true))

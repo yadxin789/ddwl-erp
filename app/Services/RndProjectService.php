@@ -68,7 +68,8 @@ class RndProjectService
                 'creator_id' => Auth::id() ?? 0,
                 'start_date' => $start->toDateString(),
                 'end_date' => $projectEnd->toDateString(),
-                'status' => 'in_progress',
+                // 四态口径：计划开始日在未来 = 立项中（尚未启动）；否则进行中
+                'status' => $start->isFuture() ? 'initiation' : 'in_progress',
                 'stage' => 'initiation',
                 'progress' => 0,
             ]);
@@ -108,6 +109,13 @@ class RndProjectService
 
                 $deptStart = $deptEnd->copy()->addDay();
             }
+
+            \App\Models\Rnd\RndProjectLog::record(
+                $project->id,
+                '创建项目',
+                "创建项目「{$project->project_name}」，计划 {$start->toDateString()} ~ {$projectEnd->toDateString()}，共 " . count($deptIds) . ' 个部门参与',
+                'operation'
+            );
 
             return $project;
         });
@@ -150,6 +158,16 @@ class RndProjectService
             $task->id
         );
 
+        \App\Models\Rnd\RndProjectLog::record(
+            $projectId,
+            '派发任务',
+            "任务「{$taskName}」指派给 " . (\App\Models\Organization\User::find($data['executor_id'])->identity_label ?? '—')
+                . '，审核人 ' . (\App\Models\Organization\User::find($data['auditor_id'])->identity_label ?? '—')
+                . '，截止 ' . $data['end_date'],
+            'operation',
+            $task->id
+        );
+
         return $task;
     }
 
@@ -171,6 +189,14 @@ class RndProjectService
             ]);
 
             $task->update(['status' => 'submitted']);
+
+            \App\Models\Rnd\RndProjectLog::record(
+                $task->project_id,
+                '上传交付物',
+                "v{$doc->version_no} 已上传，任务「{$task->name}」转「已提交待审」",
+                'document',
+                $task->id
+            );
 
             if ($task->auditor_id) {
                 $this->notifier->addTodo(
@@ -208,6 +234,15 @@ class RndProjectService
                 }
                 $task->update(['status' => $pass ? 'approved' : 'rejected']);
                 $this->recalcProgress($task->project_id);
+
+                \App\Models\Rnd\RndProjectLog::record(
+                    $doc->project_id,
+                    $pass ? '审核通过' : '审核驳回',
+                    'v' . $doc->version_no . ' ' . ($pass ? '通过' : '驳回') . ($remark ? "，意见：{$remark}" : ''),
+                    'document',
+                    $task->id
+                );
+
                 // P0-05：项目行级范围是"创建人=本人"，审核人取不到，必须绕过（授权已在上层完成）
                 $project = RndProject::withoutGlobalScopes()->find($task->project_id);
                 if ($project) {
@@ -269,6 +304,14 @@ class RndProjectService
 
             Log::info('研发任务延期已批准', ['application_id' => $applicationId, 'task_id' => $task->id, 'days' => $app->apply_days]);
 
+            \App\Models\Rnd\RndProjectLog::record(
+                (int) $task->project_id,
+                '延期批准',
+                "任务「{$task->name}」顺延 {$app->apply_days} 天，截止日期改为 {$task->end_date?->toDateString()}",
+                'extension',
+                $task->id
+            );
+
             return $app;
         });
     }
@@ -323,6 +366,13 @@ class RndProjectService
 
             $project->update(['stage' => $targetStage, 'stage_changed_at' => now()]);
             Log::info('研发阶段推进', ['project_id' => $project->id, 'from' => $current, 'to' => $targetStage]);
+
+            \App\Models\Rnd\RndProjectLog::record(
+                $project->id,
+                '阶段推进',
+                '阶段由「' . (RndProject::STAGES[array_keys(RndProject::STAGES)[$current]] ?? '—') . '」推进为「' . RndProject::STAGES[$targetStage] . '」',
+                'stage'
+            );
 
             return $project;
         });

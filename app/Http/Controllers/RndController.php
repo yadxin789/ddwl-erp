@@ -2,12 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Office\ChatMessage;
+use App\Models\Office\ChatRoom;
 use App\Models\Organization\Department;
 use App\Models\Organization\User;
 use App\Models\Rnd\ProjectTemplate;
+use App\Models\Rnd\RndCollabDocument;
 use App\Models\Rnd\RndExtensionApplication;
+use App\Models\Rnd\RndMeeting;
+use App\Models\Rnd\RndMeetingMember;
+use App\Models\Rnd\RndMeetingSignal;
 use App\Models\Rnd\RndProject;
 use App\Models\Rnd\RndProjectDocument;
+use App\Models\Rnd\RndProjectLog;
 use App\Models\Rnd\RndProjectTask;
 use App\Models\Rnd\RndTaskType;
 use App\Services\FileService;
@@ -20,16 +27,137 @@ class RndController extends Controller
     {
     }
 
-    public function projects()
+    /**
+     * 研发项目列表：页签按四态切换（全部 / 立项中 / 进行中 / 已暂停 / 已完成）。
+     * 研发经理与系统管理员可看全量；其余人只看到自己参入的项目（创建 / 执行 / 审核）。
+     */
+    public function projects(Request $request)
     {
         $user = auth()->user();
+        $status = (string) $request->query('status', '');
+        $isManager = $this->isProjectManager($user);
 
-        // 研发经理（项目监督人）看全部；其他人只看“我创建 / 我执行 / 我审核”的项目
-        $projects = $this->isProjectManager($user)
-            ? RndProject::withoutGlobalScope('data_scope')->with('creator')->orderByDesc('id')->paginate(15)
-            : RndProject::mine()->with('creator')->orderByDesc('id')->paginate(15);
+        $base = function () use ($isManager) {
+            return $isManager
+                ? RndProject::withoutGlobalScope('data_scope')
+                : RndProject::mine();
+        };
 
-        return view('rnd.projects', compact('projects'));
+        $projects = $base()->byStatus($status)
+            ->with(['creator', 'tasks.executor', 'tasks.auditor'])
+            ->orderByRaw("FIELD(status, 'in_progress', 'initiation', 'paused', 'completed')")
+            ->orderByDesc('id')
+            ->paginate(15)
+            ->withQueryString();
+
+        // 页签计数：同样只统计自己参入的项目（研发经理统计全量）
+        $countScope = $base();
+        $counts = [
+            'all' => (clone $countScope)->count(),
+            'initiation' => (clone $countScope)->byStatus('initiation')->count(),
+            'in_progress' => (clone $countScope)->byStatus('in_progress')->count(),
+            'paused' => (clone $countScope)->byStatus('paused')->count(),
+            'completed' => (clone $countScope)->byStatus('completed')->count(),
+        ];
+
+        // 参与人视角的到期提醒：未完成且计划结束日已过
+        $overdueCount = (clone $countScope)
+            ->where('status', '<>', 'completed')
+            ->whereNotNull('end_date')
+            ->whereDate('end_date', '<', now()->toDateString())
+            ->count();
+
+        return view('rnd.projects', compact('projects', 'status', 'counts', 'overdueCount', 'isManager'));
+    }
+
+    /**
+     * 项目状态切换（四态）：创建人 / 研发经理 / 系统管理员可操作。
+     * 已完成的不能再回到"立项中"；从任何状态都可暂停或恢复。
+     */
+    public function projectStatus(Request $request, RndProject $project)
+    {
+        $this->authorize('manage', $project);
+
+        $data = $request->validate([
+            'status' => ['required', 'in:' . implode(',', array_keys(RndProject::STATUSES))],
+        ], [
+            'status.in' => '项目状态只能是：' . implode('、', RndProject::STATUSES),
+        ]);
+
+        $from = $project->status;
+        $project->update(['status' => $data['status']]);
+
+        RndProjectLog::record(
+            $project->id,
+            '状态变更',
+            '项目状态由「' . (RndProject::STATUSES[$from] ?? $from) . '」改为「' . RndProject::STATUSES[$data['status']] . '」',
+            'status'
+        );
+
+        return back()->with('success', "项目状态已由「" . (RndProject::STATUSES[$from] ?? $from) . "」改为「" . RndProject::STATUSES[$data['status']] . "」。");
+    }
+
+    /**
+     * 甘特图：按任务的实际起止日期排布，部门间串行可见先后，今日线便于判断是否超期。
+     */
+    public function gantt(RndProject $project)
+    {
+        $this->authorize('view', $project);
+
+        $project->load(['tasks.taskType', 'tasks.executor', 'tasks.auditor', 'tasks.documents']);
+
+        $tasks = $project->tasks->sortBy('start_date')->values();
+
+        $min = $tasks->filter(fn ($t) => $t->start_date)->min('start_date')
+            ?? $project->start_date
+            ?? now();
+        $max = $tasks->filter(fn ($t) => $t->end_date)->max('end_date')
+            ?? $project->end_date
+            ?? now();
+
+        $rangeStart = \Carbon\Carbon::parse($min)->startOfDay();
+        $rangeEnd = \Carbon\Carbon::parse($max)->startOfDay();
+        // 两端各留 2 天余量，避免首末条贴边
+        $rangeStart->subDays(2);
+        $rangeEnd->addDays(2);
+
+        $totalDays = max(1, $rangeStart->diffInDays($rangeEnd) + 1);
+        $todayOffset = null;
+        if (now()->between($rangeStart, $rangeEnd)) {
+            $todayOffset = (int) $rangeStart->diffInDays(now()->startOfDay());
+        }
+
+        // 月份刻度（按月分列，宽度按天数占比）
+        $months = [];
+        $cursor = $rangeStart->copy()->startOfMonth();
+        while ($cursor->lte($rangeEnd)) {
+            $monthStart = $cursor->copy()->max($rangeStart);
+            $monthEnd = $cursor->copy()->endOfMonth()->min($rangeEnd);
+            $days = (int) $monthStart->diffInDays($monthEnd) + 1;
+            $months[] = [
+                'label' => $cursor->format('Y年n月'),
+                'width' => round($days / $totalDays * 100, 4),
+                'days' => $days,
+            ];
+            $cursor->addMonthNoOverflow()->startOfMonth();
+        }
+
+        return view('rnd.gantt', compact('project', 'tasks', 'rangeStart', 'rangeEnd', 'totalDays', 'todayOffset', 'months'));
+    }
+
+    /**
+     * 项目履历：时间线形式展示项目全生命周期动作。
+     */
+    public function history(RndProject $project)
+    {
+        $this->authorize('view', $project);
+
+        $logs = RndProjectLog::with(['user', 'task'])
+            ->where('project_id', $project->id)
+            ->orderByDesc('id')
+            ->paginate(30);
+
+        return view('rnd.history', compact('project', 'logs'));
     }
 
     /**
@@ -414,6 +542,43 @@ class RndController extends Controller
     /* ---------- P0-06 无参工作台：我的任务 / 交付物上传 / 交付物审核 ---------- */
 
     /**
+     * 任务详情（对齐参考目录 task/show）：任务信息 + 任务操作 + 文件列表 + 延期申请记录。
+     * 任务状态保留 overdue，不受项目状态四态化影响。
+     */
+    public function taskShow(int $task)
+    {
+        $taskModel = RndProjectTask::withoutGlobalScopes()->with(['taskType', 'executor', 'auditor'])->findOrFail($task);
+        $this->authorize('view', $taskModel);
+
+        $project = RndProject::withoutGlobalScopes()->with('creator')->find($taskModel->project_id);
+
+        $documents = RndProjectDocument::withoutGlobalScopes()
+            ->with(['file', 'uploader'])
+            ->where('task_id', $taskModel->id)
+            ->orderByDesc('version_no')
+            ->get();
+
+        $extensions = RndExtensionApplication::with(['applicant', 'approver'])
+            ->where('task_id', $taskModel->id)
+            ->orderByDesc('id')
+            ->get();
+
+        $canExecute = auth()->user()->can('execute', $taskModel);
+        $canDecide = auth()->user()->can('decide', $taskModel);
+        $canUpload = auth()->user()->can('upload', $taskModel);
+
+        return view('rnd.task-show', [
+            'task' => $taskModel,
+            'project' => $project,
+            'documents' => $documents,
+            'extensions' => $extensions,
+            'canExecute' => $canExecute,
+            'canDecide' => $canDecide,
+            'canUpload' => $canUpload,
+        ]);
+    }
+
+    /**
      * 我的任务：执行人视角 + 审核人视角，按紧迫度排序（逾期、驳回在前）。
      */
     public function myTasks()
@@ -502,6 +667,333 @@ class RndController extends Controller
     }
 
     /** 项目监督人（研发经理）与系统管理员可见全部项目；其余按“创建/执行/审核”口径 */
+    /* ---------- P4 项目组内聊天室（对齐参考目录 messages/index：项目群聊 + 附件 + 轮询） ---------- */
+
+    /** 项目群聊房间（一个项目一个房间，按 room_type=project + related_id 复用） */
+    private function chatRoomFor(RndProject $project): ChatRoom
+    {
+        return ChatRoom::firstOrCreate(
+            ['room_type' => 'project', 'related_id' => $project->id],
+            ['room_name' => '项目群：' . $project->project_name, 'creator_id' => auth()->id()]
+        );
+    }
+
+    public function chat(int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $room = $this->chatRoomFor($model);
+        $messages = ChatMessage::with('sender')
+            ->where('room_id', $room->id)
+            ->orderByDesc('id')->limit(60)->get()->reverse()->values();
+
+        return view('rnd.chat', ['project' => $model, 'room' => $room, 'messages' => $messages]);
+    }
+
+    public function chatSend(Request $request, int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        // 只有项目参与人（创建人 / 执行人 / 审核人 / 研发经理）能进项目群
+        $this->authorize('view', $model);
+
+        $request->validate([
+            'content' => ['nullable', 'string', 'max:2000'],
+            'file' => ['nullable', 'file', 'max:20480'],
+        ]);
+
+        $content = trim((string) $request->input('content', ''));
+        if ($content === '' && ! $request->hasFile('file')) {
+            return back()->withErrors(['content' => '消息内容不能为空。']);
+        }
+
+        $room = $this->chatRoomFor($model);
+        $fileId = null;
+        $type = 'text';
+        if ($request->hasFile('file')) {
+            $fileId = $this->files->upload($request->file('file'), 'rnd_chat', 'chat_room', $room->id)->id;
+            $type = 'file';
+        }
+
+        ChatMessage::create([
+            'room_id' => $room->id,
+            'sender_id' => auth()->id(),
+            'msg_type' => $type,
+            'content' => $content,
+            'file_id' => $fileId,
+            'created_at' => now(),
+        ]);
+
+        return redirect()->route('rnd.projects.chat', $model->id)->with('success', '消息已发送。');
+    }
+
+    /** 增量拉取（JSON 轮询）：断网内网环境可用，不依赖 WebSocket / 外部服务 */
+    public function chatFeed(Request $request, int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $room = $this->chatRoomFor($model);
+        $after = (int) $request->query('after', 0);
+
+        $items = ChatMessage::with('sender')
+            ->where('room_id', $room->id)
+            ->when($after > 0, fn ($q) => $q->where('id', '>', $after))
+            ->orderBy('id')->limit(200)->get()
+            ->map(function ($m) {
+                $name = $m->sender->identity_label ?? ($m->sender->name ?? '—');
+
+                return [
+                    'id' => $m->id,
+                    'sender' => $name,
+                    'initial' => mb_substr($name, 0, 1),
+                    'mine' => (int) $m->sender_id === (int) auth()->id(),
+                    'type' => $m->msg_type,
+                    'content' => $m->content,
+                    'file_id' => $m->file_id,
+                    'file_name' => $m->file_id ? (\App\Models\System\MediaFile::find($m->file_id)?->original_name) : null,
+                    'time' => $m->created_at?->format('m-d H:i'),
+                ];
+            });
+
+        return response()->json([
+            'messages' => $items,
+            'last' => (int) ($items->max('id') ?? $after),
+        ]);
+    }
+
+    /* ---------- P5-1 项目组内协同办公（文档正文落库，断网可用） ---------- */
+
+    public function collab(Request $request, int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $docs = RndCollabDocument::where('project_id', $model->id)->orderByDesc('updated_at')->get();
+
+        $current = null;
+        if ($request->filled('doc')) {
+            $current = $docs->firstWhere('id', (int) $request->query('doc'));
+        }
+        $current = $current ?: $docs->first();
+
+        return view('rnd.collab', ['project' => $model, 'docs' => $docs, 'current' => $current]);
+    }
+
+    public function collabStore(Request $request, int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $request->validate(['title' => ['required', 'string', 'max:200']]);
+
+        $doc = RndCollabDocument::create([
+            'project_id' => $model->id,
+            'title' => $request->input('title'),
+            'content' => '',
+            'version' => 1,
+            'creator_id' => auth()->id(),
+            'updater_id' => auth()->id(),
+        ]);
+
+        return redirect()->route('rnd.projects.collab', ['project' => $model->id, 'doc' => $doc->id])
+            ->with('success', '协同文档已创建。');
+    }
+
+    public function collabSave(Request $request, int $doc)
+    {
+        $d = RndCollabDocument::findOrFail($doc);
+        $project = RndProject::withoutGlobalScopes()->findOrFail($d->project_id);
+        $this->authorize('view', $project);
+
+        $request->validate([
+            'title' => ['required', 'string', 'max:200'],
+            'content' => ['nullable', 'string', 'max:200000'],
+        ]);
+
+        $d->update([
+            'title' => $request->input('title'),
+            'content' => (string) $request->input('content', ''),
+            'version' => (int) $d->version + 1,
+            'updater_id' => auth()->id(),
+        ]);
+
+        return redirect()->route('rnd.projects.collab', ['project' => $project->id, 'doc' => $d->id])
+            ->with('success', '已保存 v' . $d->version . '（' . (auth()->user()->identity_label ?? '') . '）');
+    }
+
+    /* ---------- P5-2 项目组内电话会议（WebRTC + 数据库信令轮询，断网局域网可用） ---------- */
+
+    private function openMeeting(RndProject $project): ?RndMeeting
+    {
+        return RndMeeting::where('project_id', $project->id)->where('status', 'open')->latest('id')->first();
+    }
+
+    public function voice(int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $meeting = $this->openMeeting($model);
+
+        return view('rnd.voice', ['project' => $model, 'meeting' => $meeting]);
+    }
+
+    public function voiceStart(Request $request, int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $meeting = $this->openMeeting($model);
+        if (! $meeting) {
+            $meeting = RndMeeting::create([
+                'project_id' => $model->id,
+                'title' => $request->input('title') ?: ('项目电话会议 · ' . $model->project_name),
+                'status' => 'open',
+                'creator_id' => auth()->id(),
+                'started_at' => now(),
+            ]);
+        }
+
+        return redirect()->route('rnd.projects.voice', $model->id)->with('success', '会议已开启，可邀请项目成员加入。');
+    }
+
+    /** 加入 / 心跳：登记在线状态并返回在线成员 */
+    public function voiceJoin(Request $request, int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $meeting = $this->openMeeting($model);
+        if (! $meeting) {
+            return response()->json(['error' => '会议尚未开启'], 409);
+        }
+
+        RndMeetingMember::updateOrCreate(
+            ['meeting_id' => $meeting->id, 'user_id' => auth()->id()],
+            ['peer_id' => (string) $request->input('peer_id', auth()->id()), 'joined_at' => now(), 'last_seen_at' => now()]
+        );
+
+        return response()->json($this->voiceStatePayload($meeting));
+    }
+
+    /** 轮询：在线成员 + 发给我的信令（取走即删） */
+    public function voiceState(int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $meeting = $this->openMeeting($model);
+        if (! $meeting) {
+            return response()->json(['error' => '会议尚未开启'], 409);
+        }
+
+        // 心跳
+        RndMeetingMember::where('meeting_id', $meeting->id)->where('user_id', auth()->id())
+            ->update(['last_seen_at' => now()]);
+
+        return response()->json($this->voiceStatePayload($meeting));
+    }
+
+    private function voiceStatePayload(RndMeeting $meeting): array
+    {
+        $members = $meeting->onlineMembers()->map(fn ($m) => [
+            'user_id' => (int) $m->user_id,
+            'name' => $m->user->identity_label ?? ($m->user->name ?? ('用户' . $m->user_id)),
+            'mine' => (int) $m->user_id === (int) auth()->id(),
+        ])->values();
+
+        $signals = RndMeetingSignal::where('meeting_id', $meeting->id)
+            ->where('to_user_id', auth()->id())
+            ->orderBy('id')->get()
+            ->map(fn ($s) => [
+                'id' => $s->id,
+                'from' => (int) $s->from_user_id,
+                'type' => $s->type,
+                'payload' => $s->payload,
+            ])->values();
+
+        if ($signals->isNotEmpty()) {
+            RndMeetingSignal::whereIn('id', $signals->pluck('id'))->delete();
+        }
+
+        return [
+            'meeting' => ['id' => $meeting->id, 'title' => $meeting->title, 'status' => $meeting->status],
+            'me' => (int) auth()->id(),
+            'members' => $members,
+            'signals' => $signals,
+        ];
+    }
+
+    public function voiceSignal(Request $request, int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $meeting = $this->openMeeting($model);
+        if (! $meeting) {
+            return response()->json(['error' => '会议尚未开启'], 409);
+        }
+
+        $request->validate([
+            'type' => ['required', 'in:offer,answer,candidate,leave'],
+            'to' => ['required', 'integer'],
+            'payload' => ['nullable', 'string', 'max:20000'],
+        ]);
+
+        RndMeetingSignal::create([
+            'meeting_id' => $meeting->id,
+            'from_user_id' => auth()->id(),
+            'to_user_id' => (int) $request->input('to'),
+            'type' => $request->input('type'),
+            'payload' => (string) $request->input('payload', ''),
+            'created_at' => now(),
+        ]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function voiceLeave(int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $meeting = $this->openMeeting($model);
+        if ($meeting) {
+            RndMeetingMember::where('meeting_id', $meeting->id)->where('user_id', auth()->id())
+                ->update(['last_seen_at' => now()->subMinutes(5)]);
+
+            // 广播离场，便于对端立即释放连接
+            foreach ($meeting->onlineMembers() as $m) {
+                if ((int) $m->user_id !== (int) auth()->id()) {
+                    RndMeetingSignal::create([
+                        'meeting_id' => $meeting->id,
+                        'from_user_id' => auth()->id(),
+                        'to_user_id' => $m->user_id,
+                        'type' => 'leave',
+                        'payload' => '',
+                        'created_at' => now(),
+                    ]);
+                }
+            }
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function voiceClose(int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $meeting = $this->openMeeting($model);
+        if ($meeting) {
+            $meeting->update(['status' => 'closed', 'ended_at' => now()]);
+        }
+
+        return back()->with('success', '会议已结束。');
+    }
+
     private function isProjectManager(?User $user): bool
     {
         return $user

@@ -15,7 +15,12 @@ class RndProjectTaskPolicy
 {
     public function view(User $user, RndProjectTask $task): bool
     {
-        return $this->upload($user, $task);
+        if ($this->upload($user, $task)) {
+            return true;
+        }
+
+        // 任务审核人必须能打开任务详情（参考目录 task.show 对审核人开放）
+        return (int) ($task->auditor_id ?? 0) === (int) $user->id;
     }
 
     public function upload(User $user, RndProjectTask $task): bool
