@@ -62,6 +62,15 @@ class MediaFilePolicy
             return true;
         }
 
+        // 系统成员私聊：仅两名参与者可查看/下载附件。
+        if ($room->room_type === 'system_private') {
+            if (preg_match('/^系统私聊:(\d+):(\d+)$/u', (string) $room->room_name, $m)) {
+                return in_array((int) $user->id, [(int) $m[1], (int) $m[2]], true);
+            }
+
+            return false;
+        }
+
         $project = RndProject::withoutGlobalScopes()->find($room->related_id);
         if (! $project) {
             return false;

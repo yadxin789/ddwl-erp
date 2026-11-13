@@ -147,9 +147,22 @@ class OfficeController extends Controller
     }
 
     /* ---------- 聊天室 ---------- */
-    public function chatRooms()
+    public function chatRooms(Request $request)
     {
-        $room = $this->systemChatRoom();
+        $withId = (int) $request->query('with', 0);
+        $target = null;
+
+        if ($withId && $withId !== Auth::id()) {
+            $target = User::with('department')->where('status', 1)->find($withId);
+            if (! $target) {
+                return redirect()->route('office.chat.rooms')
+                    ->withErrors(['with' => '该成员不存在或已停用。']);
+            }
+            $room = $this->systemPrivateRoom($withId);
+        } else {
+            $room = $this->systemChatRoom();
+        }
+
         $room->load('messages.sender');
         $users = User::with('department')
             ->where('status', 1)
@@ -157,13 +170,25 @@ class OfficeController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('office.chat-rooms', compact('room', 'users'));
+        return view('office.chat-rooms', compact('room', 'users', 'target', 'withId'));
     }
 
     public function chatShow(ChatRoom $room)
     {
-        // 全局聊天室与研发项目聊天室隔离：项目群/研发私聊不允许在全局入口打开。
-        if ($room->room_type !== 'system_all') {
+        $target = null;
+
+        if ($room->room_type === 'system_private') {
+            $ids = $this->systemPrivateUserIds($room);
+            if (! in_array((int) Auth::id(), $ids, true)) {
+                return redirect()->route('office.chat.rooms');
+            }
+            $otherId = (int) collect($ids)->first(fn ($id) => $id !== (int) Auth::id());
+            $target = User::with('department')->where('status', 1)->find($otherId);
+            if (! $target) {
+                return redirect()->route('office.chat.rooms');
+            }
+        } elseif ($room->room_type !== 'system_all') {
+            // 全局聊天室与研发项目聊天室隔离：项目群/研发私聊不允许在全局入口打开。
             return redirect()->route('office.chat.rooms');
         }
 
@@ -174,7 +199,9 @@ class OfficeController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('office.chat-show', compact('room', 'users'));
+        $withId = $target?->id ?? 0;
+
+        return view('office.chat-show', compact('room', 'users', 'target', 'withId'));
     }
 
     /** 系统全员聊天室：独立于研发项目聊天室，所有登录成员共用。 */
@@ -186,9 +213,38 @@ class OfficeController extends Controller
         );
     }
 
+    /** 系统成员私聊：独立于项目私聊，按两名成员编号生成固定房间。 */
+    private function systemPrivateRoom(int $otherId): ChatRoom
+    {
+        $ids = [(int) Auth::id(), $otherId];
+        sort($ids);
+
+        return ChatRoom::firstOrCreate(
+            ['room_type' => 'system_private', 'room_name' => '系统私聊:' . $ids[0] . ':' . $ids[1]],
+            ['creator_id' => Auth::id()]
+        );
+    }
+
+    /** @return int[] */
+    private function systemPrivateUserIds(ChatRoom $room): array
+    {
+        if ($room->room_type !== 'system_private') {
+            return [];
+        }
+        if (! preg_match('/^系统私聊:(\d+):(\d+)$/u', (string) $room->room_name, $m)) {
+            return [];
+        }
+
+        return [(int) $m[1], (int) $m[2]];
+    }
+
     public function chatSend(Request $request, ChatRoom $room)
     {
-        if ($room->room_type !== 'system_all') {
+        $isSystemAll = $room->room_type === 'system_all';
+        $isSystemPrivate = $room->room_type === 'system_private'
+            && in_array((int) Auth::id(), $this->systemPrivateUserIds($room), true);
+
+        if (! $isSystemAll && ! $isSystemPrivate) {
             return redirect()->route('office.chat.rooms');
         }
 

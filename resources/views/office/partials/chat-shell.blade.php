@@ -1,6 +1,7 @@
 @php
     $emojis = $emojis ?? ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','💩','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾'];
     $currentUserId = (int) auth()->id();
+    $targetId = (int) (($target ?? null)->id ?? 0);
 @endphp
 
 <div class="card chat-shell">
@@ -14,14 +15,20 @@
                 <div class="text-muted small">系统所有成员</div>
             </div>
 
-            <div class="chat-sidebar-title">系统成员（{{ $users->count() }}）</div>
+            <div class="chat-sidebar-title">系统成员（{{ $users->count() }}） <span class="fw-normal text-muted">· 双击可私聊</span></div>
             <div class="chat-member-list">
                 @forelse ($users as $user)
                     @php
                         $displayName = trim((string) $user->name) ?: $user->username;
                         $deptName = $user->department?->dept_name;
+                        $isSelf = (int) $user->id === $currentUserId;
+                        $privateUrl = $isSelf
+                            ? route('office.chat.rooms')
+                            : route('office.chat.rooms', ['with' => $user->id]);
                     @endphp
-                    <div class="chat-member-item">
+                    <a href="{{ $privateUrl }}"
+                       class="chat-member-item {{ ! $isSelf && $targetId === (int) $user->id ? 'active' : '' }}"
+                       title="{{ $isSelf ? '当前登录用户' : '双击进入与 ' . $displayName . ' 的私聊' }}">
                         <span class="chat-avatar-wrap">
                             @if ($user->avatar_url)
                                 <img src="{{ $user->avatar_url }}" alt="{{ $displayName }}" class="chat-avatar-img">
@@ -31,11 +38,11 @@
                         </span>
                         <span class="chat-member-meta">
                             <span class="chat-member-name">
-                                {{ $displayName }}@if ((int) $user->id === $currentUserId)<span class="text-muted">（我）</span>@endif
+                                {{ $displayName }}@if ($isSelf)<span class="text-muted">（我）</span>@endif
                             </span>
                             <span class="chat-member-sub">{{ $deptName ?: '未分配部门' }}</span>
                         </span>
-                    </div>
+                    </a>
                 @empty
                     <div class="p-3 text-muted small">暂无系统成员</div>
                 @endforelse
@@ -47,14 +54,33 @@
             @if ($room)
                 <div class="chat-main-head">
                     <div class="d-flex align-items-center gap-2 min-w-0">
-                        <span class="chat-avatar bg-primary"><i class="bi bi-people"></i></span>
-                        <div class="min-w-0">
-                            <div class="fw-semibold text-truncate">{{ $room->room_name }}</div>
-                            <div class="small text-muted">
-                                系统全员 · {{ $users->count() }} 位成员 · {{ $room->messages->count() }} 条消息
+                        @if ($target)
+                            @if ($target->avatar_url)
+                                <img src="{{ $target->avatar_url }}" class="chat-head-avatar" alt="{{ $target->name }}">
+                            @else
+                                <span class="chat-avatar bg-secondary">{{ mb_substr(trim((string) $target->name), 0, 1) }}</span>
+                            @endif
+                            <div class="min-w-0">
+                                <div class="fw-semibold text-truncate">{{ $target->name }}</div>
+                                <div class="small text-muted">
+                                    {{ $target->department?->dept_name ?: '未分配部门' }} · 私聊 · {{ $room->messages->count() }} 条消息
+                                </div>
                             </div>
-                        </div>
+                        @else
+                            <span class="chat-avatar bg-primary"><i class="bi bi-people"></i></span>
+                            <div class="min-w-0">
+                                <div class="fw-semibold text-truncate">{{ $room->room_name }}</div>
+                                <div class="small text-muted">
+                                    系统全员 · {{ $users->count() }} 位成员 · {{ $room->messages->count() }} 条消息
+                                </div>
+                            </div>
+                        @endif
                     </div>
+                    @if ($target)
+                        <a href="{{ route('office.chat.rooms') }}" class="btn btn-sm btn-outline-secondary flex-shrink-0">
+                            <i class="bi bi-people me-1"></i>返回全员聊天
+                        </a>
+                    @endif
                 </div>
 
                 <div class="chat-messages" id="chat-messages">
@@ -136,7 +162,7 @@
                                 </button>
                             </div>
                             <textarea name="content" id="chat-input" rows="2" class="form-control border-0"
-                                      placeholder="输入消息…" style="resize:none;box-shadow:none;"></textarea>
+                                      placeholder="{{ $target ? '输入私聊消息…' : '输入消息…' }}" style="resize:none;box-shadow:none;"></textarea>
                         </div>
                         @error('content')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                         @error('file')<div class="text-danger small mt-1">{{ $message }}</div>@enderror

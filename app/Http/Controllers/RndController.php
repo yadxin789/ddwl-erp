@@ -842,7 +842,7 @@ class RndController extends Controller
             $params['with'] = $receiverId;
         }
 
-        return redirect()->route('rnd.projects.chat', $params)->with('success', '消息已发送。');
+        return redirect()->route('rnd.projects.chat', $params);
     }
 
     /** 增量拉取（JSON 轮询）：群聊与私聊共用，断网内网环境可用 */
@@ -885,8 +885,7 @@ class RndController extends Controller
             $params['with'] = $withId;
         }
 
-        return redirect()->route('rnd.projects.chat', $params)
-            ->with('success', $withId ? '已清空你的私聊留言板' : '已清空你的群聊留言板');
+        return redirect()->route('rnd.projects.chat', $params);
     }
 
     /** 管理员删除单条消息：软删除，保留附件与追溯记录 */
@@ -907,7 +906,7 @@ class RndController extends Controller
 
         $msg->delete();
 
-        return back()->with('success', '留言已删除。');
+        return back();
     }
 
     private function chatEmojis(): array

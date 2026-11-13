@@ -9,13 +9,6 @@
     $isAdmin = auth()->user()?->hasRole('role_sys_admin') ?? false;
 @endphp
 
-@if (session('success'))
-<div class="alert alert-success py-2">{{ session('success') }}</div>
-@endif
-@if ($errors->any())
-<div class="alert alert-danger py-2">{{ $errors->first() }}</div>
-@endif
-
 <div class="card chat-shell">
     <div class="row g-0 chat-body">
         {{-- 左侧：项目群聊 + 项目成员 --}}
