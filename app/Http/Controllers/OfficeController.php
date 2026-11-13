@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Office\ChatClearState;
 use App\Models\Office\ChatRoom;
 use App\Models\Office\SystemNotification;
 use App\Models\Office\TodoItem;
@@ -163,7 +164,7 @@ class OfficeController extends Controller
             $room = $this->systemChatRoom();
         }
 
-        $room->load('messages.sender');
+        $this->loadSystemMessages($room);
         $users = User::with('department')
             ->where('status', 1)
             ->orderBy('department_id')
@@ -192,7 +193,7 @@ class OfficeController extends Controller
             return redirect()->route('office.chat.rooms');
         }
 
-        $room->load('messages.sender');
+        $this->loadSystemMessages($room);
         $users = User::with('department')
             ->where('status', 1)
             ->orderBy('department_id')
@@ -202,6 +203,22 @@ class OfficeController extends Controller
         $withId = $target?->id ?? 0;
 
         return view('office.chat-show', compact('room', 'users', 'target', 'withId'));
+    }
+
+    /** 按当前用户的清空游标加载系统聊天室消息，只影响自己的显示范围。 */
+    private function loadSystemMessages(ChatRoom $room): void
+    {
+        $clear = ChatClearState::where('user_id', Auth::id())
+            ->where('room_id', $room->id)
+            ->value('cleared_at');
+
+        $messages = \App\Models\Office\ChatMessage::with('sender')
+            ->where('room_id', $room->id)
+            ->when($clear, fn ($q) => $q->where('created_at', '>', $clear))
+            ->orderBy('id')
+            ->get();
+
+        $room->setRelation('messages', $messages);
     }
 
     /** 系统全员聊天室：独立于研发项目聊天室，所有登录成员共用。 */
@@ -275,5 +292,31 @@ class OfficeController extends Controller
         ]);
 
         return back();
+    }
+
+    /** 清空我的留言板：只写当前用户的显示游标，不删除真实消息。 */
+    public function chatClear(Request $request, ChatRoom $room)
+    {
+        $ids = $this->systemPrivateUserIds($room);
+        $isSystemAll = $room->room_type === 'system_all';
+        $isSystemPrivate = $room->room_type === 'system_private'
+            && in_array((int) Auth::id(), $ids, true);
+
+        if (! $isSystemAll && ! $isSystemPrivate) {
+            return redirect()->route('office.chat.rooms');
+        }
+
+        ChatClearState::updateOrCreate(
+            ['user_id' => Auth::id(), 'room_id' => $room->id],
+            ['cleared_at' => now()]
+        );
+
+        if ($isSystemPrivate) {
+            $otherId = (int) collect($ids)->first(fn ($id) => $id !== (int) Auth::id());
+
+            return redirect()->route('office.chat.rooms', ['with' => $otherId]);
+        }
+
+        return redirect()->route('office.chat.rooms');
     }
 }

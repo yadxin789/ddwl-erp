@@ -76,11 +76,20 @@
                             </div>
                         @endif
                     </div>
-                    @if ($target)
-                        <a href="{{ route('office.chat.rooms') }}" class="btn btn-sm btn-outline-secondary flex-shrink-0">
-                            <i class="bi bi-people me-1"></i>返回全员聊天
-                        </a>
-                    @endif
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <form method="POST" action="{{ route('office.chat.clear', $room) }}" class="mb-0"
+                              onsubmit="return confirm('确定清空你自己的留言板吗？此操作只清空你的显示记录，不会删除任何聊天记录。')">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash3 me-1"></i>清空我的留言板
+                            </button>
+                        </form>
+                        @if ($target)
+                            <a href="{{ route('office.chat.rooms') }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-people me-1"></i>返回全员聊天
+                            </a>
+                        @endif
+                    </div>
                 </div>
 
                 <div class="chat-messages" id="chat-messages">
