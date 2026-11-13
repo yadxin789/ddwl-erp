@@ -147,7 +147,7 @@
 
 @push('styles')
 <style>
-    .gantt-scroll-container { overflow-x: auto; border: 1px solid #dee2e6; border-radius: .25rem; }
+    .gantt-scroll-container { overflow-x: auto; max-width: 100%; width: 100%; border: 1px solid #dee2e6; border-radius: .25rem; }
     .gantt-container { min-width: max-content; background: #fff; }
     .gantt-header { display: flex; background: #4a5568; color: #fff; position: sticky; top: 0; z-index: 10; }
     .gantt-task-column { width: 250px; min-width: 250px; padding: 10px 14px; border-right: 2px solid #2d3748; font-weight: 600; font-size: 14px; }

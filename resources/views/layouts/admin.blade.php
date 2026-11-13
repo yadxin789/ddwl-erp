@@ -8,7 +8,9 @@
     <link rel="stylesheet" href="{{ asset('css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/all.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/v4-shims.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/bootstrap-icons.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/erp.css') }}">
+    @stack('styles')
 </head>
 <body>
 <div class="app-wrapper">
