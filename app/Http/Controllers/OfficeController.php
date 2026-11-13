@@ -149,16 +149,41 @@ class OfficeController extends Controller
     /* ---------- 聊天室 ---------- */
     public function chatRooms()
     {
-        $rooms = ChatRoom::orderByDesc('id')->paginate(15);
+        $room = $this->systemChatRoom();
+        $room->load('messages.sender');
+        $users = User::with('department')
+            ->where('status', 1)
+            ->orderBy('department_id')
+            ->orderBy('name')
+            ->get();
 
-        return view('office.chat-rooms', compact('rooms'));
+        return view('office.chat-rooms', compact('room', 'users'));
     }
 
     public function chatShow(ChatRoom $room)
     {
-        $room->load('messages.sender');
+        // 全局聊天室与研发项目聊天室隔离：项目群/研发私聊不允许在全局入口打开。
+        if ($room->room_type !== 'system_all') {
+            return redirect()->route('office.chat.rooms');
+        }
 
-        return view('office.chat-show', compact('room'));
+        $room->load('messages.sender');
+        $users = User::with('department')
+            ->where('status', 1)
+            ->orderBy('department_id')
+            ->orderBy('name')
+            ->get();
+
+        return view('office.chat-show', compact('room', 'users'));
+    }
+
+    /** 系统全员聊天室：独立于研发项目聊天室，所有登录成员共用。 */
+    private function systemChatRoom(): ChatRoom
+    {
+        return ChatRoom::firstOrCreate(
+            ['room_type' => 'system_all'],
+            ['room_name' => '系统全员聊天室', 'creator_id' => Auth::id()]
+        );
     }
 
     public function chatSend(Request $request, ChatRoom $room)
