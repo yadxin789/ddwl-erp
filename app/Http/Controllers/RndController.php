@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Office\ChatClearState;
 use App\Models\Office\ChatMessage;
 use App\Models\Office\ChatRoom;
 use App\Models\Organization\Department;
@@ -17,6 +18,7 @@ use App\Models\Rnd\RndProjectDocument;
 use App\Models\Rnd\RndProjectLog;
 use App\Models\Rnd\RndProjectTask;
 use App\Models\Rnd\RndTaskType;
+use App\Models\System\MediaFile;
 use App\Services\FileService;
 use App\Services\RndProjectService;
 use Illuminate\Http\Request;
@@ -142,7 +144,15 @@ class RndController extends Controller
             $cursor->addMonthNoOverflow()->startOfMonth();
         }
 
-        return view('rnd.gantt', compact('project', 'tasks', 'rangeStart', 'rangeEnd', 'totalDays', 'todayOffset', 'months'));
+        // 按部门分组：任务自身带 department_id，按部门顺序稳定输出；无部门任务归入"未分配部门"
+        $deptIds = $tasks->pluck('department_id')->filter()->unique()->values();
+        $deptMap = Department::whereIn('id', $deptIds)->orderBy('sort_order')->orderBy('id')->get();
+        $departments = $deptMap->map(fn ($d) => ['id' => (int) $d->id, 'name' => $d->dept_name])->values();
+        if ($tasks->contains(fn ($t) => ! $t->department_id)) {
+            $departments->push(['id' => 0, 'name' => '未分配部门']);
+        }
+
+        return view('rnd.gantt', compact('project', 'tasks', 'rangeStart', 'rangeEnd', 'totalDays', 'todayOffset', 'months', 'departments'));
     }
 
     /**
@@ -678,17 +688,111 @@ class RndController extends Controller
         );
     }
 
-    public function chat(int $project)
+    /**
+     * 一对一私聊房间：项目内按两个用户 ID 生成稳定键，复用同一套消息/附件/清空游标。
+     * 不修改现有 messages 表，也不扩大现有群聊表语义。
+     */
+    private function privateRoomFor(RndProject $project, int $targetUserId): ChatRoom
+    {
+        $pair = implode(':', [min((int) auth()->id(), $targetUserId), max((int) auth()->id(), $targetUserId)]);
+
+        return ChatRoom::firstOrCreate(
+            ['room_type' => 'rnd_private', 'related_id' => $project->id, 'room_name' => '私聊:' . $pair],
+            ['creator_id' => auth()->id()]
+        );
+    }
+
+    /** 项目成员：创建人 + 任务执行人 + 任务审核人（与项目页参与人口径一致） */
+    private function chatMembers(RndProject $project): array
+    {
+        cache()->put('rnd_chat_online:' . auth()->id(), true, 300);
+
+        $ids = $project->participantIds();
+
+        return User::whereIn('id', $ids)
+            ->with(['department', 'position'])
+            ->get()
+            ->map(function (User $u) {
+                $isMe = (int) $u->id === (int) auth()->id();
+                $online = $isMe
+                    || cache()->has('rnd_chat_online:' . $u->id)
+                    || ($u->last_login_at && $u->last_login_at->gt(now()->subMinutes(5)));
+
+                return [
+                    'id' => (int) $u->id,
+                    'name' => $u->name ?: $u->username,
+                    'initial' => mb_substr($u->name ?: $u->username, 0, 1),
+                    'avatar_url' => $u->avatar_url,
+                    'department' => $u->department->dept_name ?? '',
+                    'is_online' => $online,
+                    'is_me' => $isMe,
+                ];
+            })
+            ->sortBy(fn ($m) => [$m['is_me'] ? 1 : 0, $m['is_online'] ? 0 : 1, $m['name']])
+            ->values()
+            ->all();
+    }
+
+    private function chatPayload(ChatMessage $m): array
+    {
+        $file = $m->file_id ? MediaFile::find($m->file_id) : null;
+        $name = $m->sender->name ?? ($m->sender->username ?? '—');
+        $isAdmin = auth()->user()?->hasRole('role_sys_admin') ?? false;
+
+        return [
+            'id' => (int) $m->id,
+            'sender' => $name,
+            'initial' => mb_substr($name, 0, 1),
+            'avatar_url' => $m->sender->avatar_url ?? null,
+            'mine' => (int) $m->sender_id === (int) auth()->id(),
+            'type' => $m->msg_type,
+            'content' => (string) $m->content,
+            'file_url' => $file ? route('files.download', $file->id) : null,
+            'file_preview_url' => $file && $file->canPreview() ? route('files.preview', $file->id) : null,
+            'file_name' => $file->file_name ?? null,
+            'time' => $m->created_at?->format('H:i'),
+            'full_time' => $m->created_at?->format('Y-m-d H:i:s'),
+            'can_delete' => $isAdmin,
+        ];
+    }
+
+    private function chatMessages(ChatRoom $room, int $limit = 80)
+    {
+        $clear = ChatClearState::where('user_id', auth()->id())
+            ->where('room_id', $room->id)
+            ->value('cleared_at');
+
+        return ChatMessage::with('sender')
+            ->where('room_id', $room->id)
+            ->when($clear, fn ($q) => $q->where('created_at', '>', $clear))
+            ->orderByDesc('id')->limit($limit)->get()->reverse()->values();
+    }
+
+    public function chat(Request $request, int $project)
     {
         $model = RndProject::withoutGlobalScopes()->findOrFail($project);
         $this->authorize('view', $model);
 
-        $room = $this->chatRoomFor($model);
-        $messages = ChatMessage::with('sender')
-            ->where('room_id', $room->id)
-            ->orderByDesc('id')->limit(60)->get()->reverse()->values();
+        $members = $this->chatMembers($model);
+        $withId = (int) $request->query('with', 0);
+        if ($withId && ! collect($members)->contains(fn ($m) => $m['id'] === $withId)) {
+            abort(404, '该成员不在本项目内');
+        }
 
-        return view('rnd.chat', ['project' => $model, 'room' => $room, 'messages' => $messages]);
+        $room = $withId ? $this->privateRoomFor($model, $withId) : $this->chatRoomFor($model);
+        $messages = $this->chatMessages($room);
+        $target = $withId ? collect($members)->firstWhere('id', $withId) : null;
+
+        return view('rnd.chat', [
+            'project' => $model,
+            'room' => $room,
+            'members' => $members,
+            'messages' => $messages,
+            'payload' => $messages->map(fn ($m) => $this->chatPayload($m))->values(),
+            'target' => $target,
+            'withId' => $withId,
+            'emojis' => $this->chatEmojis(),
+        ]);
     }
 
     public function chatSend(Request $request, int $project)
@@ -700,6 +804,7 @@ class RndController extends Controller
         $request->validate([
             'content' => ['nullable', 'string', 'max:2000'],
             'file' => ['nullable', 'file', 'max:20480'],
+            'receiver_id' => ['nullable', 'integer'],
         ]);
 
         $content = trim((string) $request->input('content', ''));
@@ -707,11 +812,16 @@ class RndController extends Controller
             return back()->withErrors(['content' => '消息内容不能为空。']);
         }
 
-        $room = $this->chatRoomFor($model);
+        $receiverId = (int) $request->input('receiver_id', 0);
+        if ($receiverId && ! in_array($receiverId, $model->participantIds(), true)) {
+            abort(404, '该成员不在本项目内');
+        }
+
+        $room = $receiverId ? $this->privateRoomFor($model, $receiverId) : $this->chatRoomFor($model);
         $fileId = null;
         $type = 'text';
         if ($request->hasFile('file')) {
-            $fileId = $this->files->upload($request->file('file'), 'rnd_chat', 'chat_room', $room->id)->id;
+            $fileId = $this->files->upload($request->file('file'), 'chat_file', 'chat_room', $room->id)->id;
             $type = 'file';
         }
 
@@ -724,42 +834,96 @@ class RndController extends Controller
             'created_at' => now(),
         ]);
 
-        return redirect()->route('rnd.projects.chat', $model->id)->with('success', '消息已发送。');
+        $params = ['project' => $model->id];
+        if ($receiverId) {
+            $params['with'] = $receiverId;
+        }
+
+        return redirect()->route('rnd.projects.chat', $params)->with('success', '消息已发送。');
     }
 
-    /** 增量拉取（JSON 轮询）：断网内网环境可用，不依赖 WebSocket / 外部服务 */
+    /** 增量拉取（JSON 轮询）：群聊与私聊共用，断网内网环境可用 */
     public function chatFeed(Request $request, int $project)
     {
         $model = RndProject::withoutGlobalScopes()->findOrFail($project);
         $this->authorize('view', $model);
 
-        $room = $this->chatRoomFor($model);
-        $after = (int) $request->query('after', 0);
-
-        $items = ChatMessage::with('sender')
-            ->where('room_id', $room->id)
-            ->when($after > 0, fn ($q) => $q->where('id', '>', $after))
-            ->orderBy('id')->limit(200)->get()
-            ->map(function ($m) {
-                $name = $m->sender->identity_label ?? ($m->sender->name ?? '—');
-
-                return [
-                    'id' => $m->id,
-                    'sender' => $name,
-                    'initial' => mb_substr($name, 0, 1),
-                    'mine' => (int) $m->sender_id === (int) auth()->id(),
-                    'type' => $m->msg_type,
-                    'content' => $m->content,
-                    'file_id' => $m->file_id,
-                    'file_name' => $m->file_id ? (\App\Models\System\MediaFile::find($m->file_id)?->original_name) : null,
-                    'time' => $m->created_at?->format('m-d H:i'),
-                ];
-            });
+        $withId = (int) $request->query('with', 0);
+        if ($withId && ! in_array($withId, $model->participantIds(), true)) {
+            abort(404, '该成员不在本项目内');
+        }
 
         return response()->json([
-            'messages' => $items,
-            'last' => (int) ($items->max('id') ?? $after),
+            'messages' => $this->chatMessages(
+                $withId ? $this->privateRoomFor($model, $withId) : $this->chatRoomFor($model)
+            )->map(fn ($m) => $this->chatPayload($m))->values(),
         ]);
+    }
+
+    /** 清空我的留言板：仅写当前用户的显示游标，不删除任何真实消息 */
+    public function chatClear(Request $request, int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $withId = (int) $request->input('with', 0);
+        if ($withId && ! in_array($withId, $model->participantIds(), true)) {
+            abort(404, '该成员不在本项目内');
+        }
+
+        $room = $withId ? $this->privateRoomFor($model, $withId) : $this->chatRoomFor($model);
+        ChatClearState::updateOrCreate(
+            ['user_id' => auth()->id(), 'room_id' => $room->id],
+            ['cleared_at' => now()]
+        );
+
+        $params = ['project' => $model->id];
+        if ($withId) {
+            $params['with'] = $withId;
+        }
+
+        return redirect()->route('rnd.projects.chat', $params)
+            ->with('success', $withId ? '已清空你的私聊留言板' : '已清空你的群聊留言板');
+    }
+
+    /** 管理员删除单条消息：软删除，保留附件与追溯记录 */
+    public function chatDestroy(int $project, int $message)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        abort_unless(auth()->user()?->hasRole('role_sys_admin'), 403, '只有管理员可以删除留言');
+
+        $msg = ChatMessage::findOrFail($message);
+        $room = ChatRoom::findOrFail($msg->room_id);
+        abort_unless(
+            (int) $room->related_id === (int) $model->id
+            && in_array($room->room_type, ['project', 'rnd_private'], true),
+            404
+        );
+
+        $msg->delete();
+
+        return back()->with('success', '留言已删除。');
+    }
+
+    private function chatEmojis(): array
+    {
+        return [
+            '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😊',
+            '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋',
+            '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐',
+            '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌',
+            '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🥵',
+            '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐',
+            '😕', '😟', '🙁', '☹️', '😮‍💨', '😥', '😢', '😭', '😱', '😖',
+            '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬',
+            '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽',
+            '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀',
+            '😿', '😾', '💋', '👄', '👍', '👎', '👌', '✌️', '🤞', '🤟',
+            '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '👋', '🤚', '🖐️',
+            '✋', '🖖', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '💪', '🦾',
+        ];
     }
 
     /* ---------- P5-1 项目组内协同办公（文档正文落库，断网可用） ---------- */
@@ -769,15 +933,34 @@ class RndController extends Controller
         $model = RndProject::withoutGlobalScopes()->findOrFail($project);
         $this->authorize('view', $model);
 
-        $docs = RndCollabDocument::where('project_id', $model->id)->orderByDesc('updated_at')->get();
+        $docs = RndCollabDocument::with(['creator', 'updater'])
+            ->where('project_id', $model->id)
+            ->orderByDesc('updated_at')
+            ->get();
 
         $current = null;
         if ($request->filled('doc')) {
             $current = $docs->firstWhere('id', (int) $request->query('doc'));
+            abort_unless($current, 404);
         }
-        $current = $current ?: $docs->first();
 
-        return view('rnd.collab', ['project' => $model, 'docs' => $docs, 'current' => $current]);
+        return view('rnd.collab', [
+            'project' => $model,
+            'docs' => $docs,
+            'current' => $current,
+            'docTypes' => RndCollabDocument::TYPES,
+        ]);
+    }
+
+    public function collabCreate(int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        return view('rnd.collab-create', [
+            'project' => $model,
+            'docTypes' => RndCollabDocument::TYPES,
+        ]);
     }
 
     public function collabStore(Request $request, int $project)
@@ -785,19 +968,33 @@ class RndController extends Controller
         $model = RndProject::withoutGlobalScopes()->findOrFail($project);
         $this->authorize('view', $model);
 
-        $request->validate(['title' => ['required', 'string', 'max:200']]);
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:200'],
+            'doc_type' => ['nullable', 'in:doc,sheet,slide,text'],
+        ]);
+
+        $type = $data['doc_type'] ?? 'doc';
+        $templates = [
+            'doc' => "# {$data['title']}\n\n",
+            'sheet' => "项目\t负责人\t状态\n\t\t\n",
+            'slide' => "第 1 页：{$data['title']}\n\n",
+            'text' => '',
+        ];
 
         $doc = RndCollabDocument::create([
             'project_id' => $model->id,
-            'title' => $request->input('title'),
-            'content' => '',
+            'title' => $data['title'],
+            'doc_type' => $type,
+            'content' => $templates[$type] ?? '',
             'version' => 1,
             'creator_id' => auth()->id(),
             'updater_id' => auth()->id(),
         ]);
 
+        RndProjectLog::record($model->id, '新建协同文档', '《' . $doc->title . '》(' . $doc->typeLabel() . ')', 'document');
+
         return redirect()->route('rnd.projects.collab', ['project' => $model->id, 'doc' => $doc->id])
-            ->with('success', '协同文档已创建。');
+            ->with('success', '协同文档已创建，已进入编辑。');
     }
 
     public function collabSave(Request $request, int $doc)
@@ -818,8 +1015,45 @@ class RndController extends Controller
             'updater_id' => auth()->id(),
         ]);
 
+        RndProjectLog::record(
+            $project->id,
+            '保存协同文档',
+            '《' . $d->title . '》更新为 v' . $d->version . '，操作人 ' . (auth()->user()->identity_label ?? ''),
+            'document'
+        );
+
         return redirect()->route('rnd.projects.collab', ['project' => $project->id, 'doc' => $d->id])
             ->with('success', '已保存 v' . $d->version . '（' . (auth()->user()->identity_label ?? '') . '）');
+    }
+
+    public function collabDownload(int $doc)
+    {
+        $d = RndCollabDocument::findOrFail($doc);
+        $project = RndProject::withoutGlobalScopes()->findOrFail($d->project_id);
+        $this->authorize('view', $project);
+
+        return response()->streamDownload(function () use ($d) {
+            echo $d->content;
+        }, $d->downloadName(), ['Content-Type' => 'text/plain; charset=UTF-8']);
+    }
+
+    public function collabDestroy(int $project, int $doc)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $d = RndCollabDocument::where('project_id', $model->id)->findOrFail($doc);
+        $user = auth()->user();
+        $canDelete = ($user?->hasRole('role_sys_admin') ?? false)
+            || (int) $user?->id === (int) $model->creator_id
+            || (int) $user?->id === (int) $d->creator_id;
+
+        abort_unless($canDelete, 403, '只有管理员、项目创建人或文档创建人可以删除文档');
+
+        $d->delete();
+        RndProjectLog::record($model->id, '删除协同文档', '《' . $d->title . '》移入回收站', 'document');
+
+        return redirect()->route('rnd.projects.collab', $model->id)->with('success', '文档已移入回收站。');
     }
 
     /* ---------- P5-2 项目组内电话会议（WebRTC + 数据库信令轮询，断网局域网可用） ---------- */
@@ -835,8 +1069,30 @@ class RndController extends Controller
         $this->authorize('view', $model);
 
         $meeting = $this->openMeeting($model);
+        $members = User::whereIn('id', $model->participantIds())
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($u) => [
+                'id' => (int) $u->id,
+                'name' => $u->name,
+                'initial' => mb_substr($u->name, 0, 1),
+                'avatar_url' => $u->avatar_url,
+                'is_host' => (int) $u->id === (int) $model->creator_id,
+                'is_me' => (int) $u->id === (int) auth()->id(),
+            ])->values();
 
-        return view('rnd.voice', ['project' => $model, 'meeting' => $meeting]);
+        $docs = RndCollabDocument::where('project_id', $model->id)->orderByDesc('updated_at')->get();
+
+        return view('rnd.voice', [
+            'project' => $model,
+            'meeting' => $meeting,
+            'members' => $members,
+            'docs' => $docs,
+            'isHost' => (int) auth()->id() === (int) $model->creator_id,
+            'presenter' => $meeting?->current_presenter_id
+                ? User::find($meeting->current_presenter_id)
+                : ($meeting ? $meeting->creator : null),
+        ]);
     }
 
     public function voiceStart(Request $request, int $project)
@@ -851,6 +1107,7 @@ class RndController extends Controller
                 'title' => $request->input('title') ?: ('项目电话会议 · ' . $model->project_name),
                 'status' => 'open',
                 'creator_id' => auth()->id(),
+                'current_presenter_id' => auth()->id(),
                 'started_at' => now(),
             ]);
         }
@@ -892,14 +1149,16 @@ class RndController extends Controller
         RndMeetingMember::where('meeting_id', $meeting->id)->where('user_id', auth()->id())
             ->update(['last_seen_at' => now()]);
 
-        return response()->json($this->voiceStatePayload($meeting));
+        return response()->json($this->voiceStatePayload($meeting, ! request()->boolean('peek')));
     }
 
-    private function voiceStatePayload(RndMeeting $meeting): array
+    private function voiceStatePayload(RndMeeting $meeting, bool $consumeSignals = true): array
     {
         $members = $meeting->onlineMembers()->map(fn ($m) => [
             'user_id' => (int) $m->user_id,
-            'name' => $m->user->identity_label ?? ($m->user->name ?? ('用户' . $m->user_id)),
+            'name' => $m->user->name ?? ('用户' . $m->user_id),
+            'initial' => mb_substr($m->user->name ?? '?', 0, 1),
+            'avatar_url' => $m->user->avatar_url ?? null,
             'mine' => (int) $m->user_id === (int) auth()->id(),
         ])->values();
 
@@ -913,16 +1172,167 @@ class RndController extends Controller
                 'payload' => $s->payload,
             ])->values();
 
-        if ($signals->isNotEmpty()) {
+        if ($consumeSignals && $signals->isNotEmpty()) {
             RndMeetingSignal::whereIn('id', $signals->pluck('id'))->delete();
         }
 
+        $presenter = $meeting->current_presenter_id
+            ? User::find($meeting->current_presenter_id)
+            : $meeting->creator;
+
+        $document = null;
+        if ($meeting->current_document_id) {
+            $d = RndCollabDocument::where('project_id', $meeting->project_id)->find($meeting->current_document_id);
+            if ($d) {
+                $document = [
+                    'id' => (int) $d->id,
+                    'title' => $d->title,
+                    'type' => $d->typeLabel(),
+                    'version' => (int) $d->version,
+                    'download_url' => route('rnd.collab.download', $d),
+                ];
+            }
+        }
+
         return [
-            'meeting' => ['id' => $meeting->id, 'title' => $meeting->title, 'status' => $meeting->status],
+            'meeting' => [
+                'id' => $meeting->id,
+                'title' => $meeting->title,
+                'status' => $meeting->status,
+                'host_id' => (int) $meeting->creator_id,
+                'is_host' => (int) auth()->id() === (int) $meeting->creator_id,
+            ],
             'me' => (int) auth()->id(),
             'members' => $members,
             'signals' => $signals,
+            'presenter' => $presenter ? [
+                'id' => (int) $presenter->id,
+                'name' => $presenter->name,
+            ] : null,
+            'document' => $document,
+            'edit_mode' => (bool) $meeting->presentation_edit_mode,
         ];
+    }
+
+    /** 申请演示：给主持人留一条信令，由主持人确认后转移演示权 */
+    public function voiceApply(Request $request, int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $meeting = $this->openMeeting($model);
+        if (! $meeting) {
+            return response()->json(['error' => '会议尚未开启'], 409);
+        }
+
+        if ((int) $meeting->creator_id !== (int) auth()->id()) {
+            RndMeetingSignal::create([
+                'meeting_id' => $meeting->id,
+                'from_user_id' => auth()->id(),
+                'to_user_id' => $meeting->creator_id,
+                'type' => 'presenter_apply',
+                'payload' => json_encode(['name' => auth()->user()->name], JSON_UNESCAPED_UNICODE),
+                'created_at' => now(),
+            ]);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** 主持人确认/收回演示权，并实时广播给在线成员 */
+    public function voicePresenter(Request $request, int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $meeting = $this->openMeeting($model);
+        if (! $meeting) {
+            return response()->json(['error' => '会议尚未开启'], 409);
+        }
+
+        abort_unless((int) $meeting->creator_id === (int) auth()->id(), 403, '只有主持人可以管理演示权');
+
+        $request->validate(['user_id' => ['nullable', 'integer']]);
+        $userId = (int) $request->input('user_id', 0);
+        if ($userId && ! in_array($userId, $model->participantIds(), true)) {
+            return response()->json(['error' => '该成员不在本项目内'], 404);
+        }
+
+        $meeting->update(['current_presenter_id' => $userId ?: null]);
+        $this->broadcastMeetingSignal($meeting, 'presenter_changed', [
+            'presenter_id' => $userId ?: null,
+        ]);
+
+        return response()->json(['ok' => true, 'presenter_id' => $userId ?: null]);
+    }
+
+    /** 主持人/演示者选择演示文档 */
+    public function voiceDocument(Request $request, int $project)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $meeting = $this->openMeeting($model);
+        if (! $meeting) {
+            return response()->json(['error' => '会议尚未开启'], 409);
+        }
+
+        $isPresenter = (int) $meeting->current_presenter_id === (int) auth()->id();
+        $isHost = (int) $meeting->creator_id === (int) auth()->id();
+        abort_unless($isPresenter || $isHost, 403, '只有主持人或演示者可以切换演示文档');
+
+        $request->validate([
+            'doc_id' => ['nullable', 'integer'],
+            'edit_mode' => ['nullable', 'boolean'],
+        ]);
+
+        $docId = (int) $request->input('doc_id', 0);
+        if ($docId) {
+            $doc = RndCollabDocument::where('project_id', $model->id)->find($docId);
+            abort_unless($doc, 404, '文档不存在');
+        }
+
+        $meeting->update([
+            'current_document_id' => $docId ?: null,
+            'presentation_edit_mode' => (bool) $request->boolean('edit_mode'),
+        ]);
+        $this->broadcastMeetingSignal($meeting, 'doc_selected', [
+            'document_id' => $docId ?: null,
+            'edit_mode' => (bool) $request->boolean('edit_mode'),
+        ]);
+
+        return response()->json(['ok' => true, 'document_id' => $docId ?: null]);
+    }
+
+    /** 演示文档正文（只读预览） */
+    public function voiceDoc(int $project, int $doc)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $d = RndCollabDocument::where('project_id', $model->id)->findOrFail($doc);
+
+        return response()->json([
+            'id' => (int) $d->id,
+            'title' => $d->title,
+            'type' => $d->typeLabel(),
+            'content' => (string) $d->content,
+            'download_url' => route('rnd.collab.download', $d),
+        ]);
+    }
+
+    private function broadcastMeetingSignal(RndMeeting $meeting, string $type, array $payload = []): void
+    {
+        foreach ($meeting->onlineMembers() as $member) {
+            RndMeetingSignal::create([
+                'meeting_id' => $meeting->id,
+                'from_user_id' => auth()->id(),
+                'to_user_id' => $member->user_id,
+                'type' => $type,
+                'payload' => json_encode($payload, JSON_UNESCAPED_UNICODE),
+                'created_at' => now(),
+            ]);
+        }
     }
 
     public function voiceSignal(Request $request, int $project)
@@ -988,7 +1398,8 @@ class RndController extends Controller
 
         $meeting = $this->openMeeting($model);
         if ($meeting) {
-            $meeting->update(['status' => 'closed', 'ended_at' => now()]);
+            abort_unless((int) $meeting->creator_id === (int) auth()->id(), 403, '只有主持人可以结束会议');
+            $meeting->update(['status' => 'closed', 'ended_at' => now(), 'current_presenter_id' => null]);
         }
 
         return back()->with('success', '会议已结束。');

@@ -14,9 +14,16 @@ class RndMeeting extends Model
 {
     protected $table = 'rnd_meetings';
 
-    protected $fillable = ['project_id', 'title', 'status', 'creator_id', 'started_at', 'ended_at'];
+    protected $fillable = [
+        'project_id', 'title', 'status', 'creator_id', 'current_presenter_id',
+        'current_document_id', 'presentation_edit_mode', 'started_at', 'ended_at',
+    ];
 
-    protected $casts = ['started_at' => 'datetime', 'ended_at' => 'datetime'];
+    protected $casts = [
+        'started_at' => 'datetime',
+        'ended_at' => 'datetime',
+        'presentation_edit_mode' => 'boolean',
+    ];
 
     public function project(): BelongsTo
     {

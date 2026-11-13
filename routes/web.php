@@ -498,11 +498,18 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group
         Route::get('/rnd/projects/{project}/chat', [RndController::class, 'chat'])->whereNumber('project')->name('rnd.projects.chat');
         Route::post('/rnd/projects/{project}/chat', [RndController::class, 'chatSend'])->whereNumber('project')->name('rnd.projects.chat.send');
         Route::get('/rnd/projects/{project}/chat/feed', [RndController::class, 'chatFeed'])->whereNumber('project')->name('rnd.projects.chat.feed');
+        Route::post('/rnd/projects/{project}/chat/clear', [RndController::class, 'chatClear'])->whereNumber('project')->name('rnd.projects.chat.clear');
+        Route::delete('/rnd/projects/{project}/chat/{message}', [RndController::class, 'chatDestroy'])
+            ->whereNumber('project')->whereNumber('message')->name('rnd.projects.chat.destroy');
 
         // P5-1 项目组内协同办公（文档）
         Route::get('/rnd/projects/{project}/collab', [RndController::class, 'collab'])->whereNumber('project')->name('rnd.projects.collab');
+        Route::get('/rnd/projects/{project}/collab/create', [RndController::class, 'collabCreate'])->whereNumber('project')->name('rnd.projects.collab.create');
         Route::post('/rnd/projects/{project}/collab', [RndController::class, 'collabStore'])->whereNumber('project')->name('rnd.projects.collab.store');
         Route::post('/rnd/collab/{doc}/save', [RndController::class, 'collabSave'])->whereNumber('doc')->name('rnd.collab.save');
+        Route::get('/rnd/collab/{doc}/download', [RndController::class, 'collabDownload'])->whereNumber('doc')->name('rnd.collab.download');
+        Route::delete('/rnd/projects/{project}/collab/{doc}', [RndController::class, 'collabDestroy'])
+            ->whereNumber('project')->whereNumber('doc')->name('rnd.projects.collab.destroy');
 
         // P5-2 项目组内电话会议（WebRTC + DB 信令）
         Route::get('/rnd/projects/{project}/voice', [RndController::class, 'voice'])->whereNumber('project')->name('rnd.projects.voice');
@@ -510,6 +517,10 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group
         Route::post('/rnd/projects/{project}/voice/join', [RndController::class, 'voiceJoin'])->whereNumber('project')->name('rnd.projects.voice.join');
         Route::get('/rnd/projects/{project}/voice/state', [RndController::class, 'voiceState'])->whereNumber('project')->name('rnd.projects.voice.state');
         Route::post('/rnd/projects/{project}/voice/signal', [RndController::class, 'voiceSignal'])->whereNumber('project')->name('rnd.projects.voice.signal');
+        Route::post('/rnd/projects/{project}/voice/apply', [RndController::class, 'voiceApply'])->whereNumber('project')->name('rnd.projects.voice.apply');
+        Route::post('/rnd/projects/{project}/voice/presenter', [RndController::class, 'voicePresenter'])->whereNumber('project')->name('rnd.projects.voice.presenter');
+        Route::post('/rnd/projects/{project}/voice/document', [RndController::class, 'voiceDocument'])->whereNumber('project')->name('rnd.projects.voice.document');
+        Route::get('/rnd/projects/{project}/voice/document/{doc}', [RndController::class, 'voiceDoc'])->whereNumber('project')->whereNumber('doc')->name('rnd.projects.voice.doc');
         Route::post('/rnd/projects/{project}/voice/leave', [RndController::class, 'voiceLeave'])->whereNumber('project')->name('rnd.projects.voice.leave');
         Route::post('/rnd/projects/{project}/voice/close', [RndController::class, 'voiceClose'])->whereNumber('project')->name('rnd.projects.voice.close');
         Route::get('/rnd/projects', [RndController::class, 'projects'])->name('rnd.projects');

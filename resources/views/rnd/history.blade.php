@@ -6,45 +6,58 @@
 @include('rnd.partials.project-tabs', ['project' => $project, 'activeTab' => 'history'])
 
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span>项目履历（共 {{ $logs->total() }} 条）</span>
-        <span class="text-muted small">记录创建、派工、交付、审核、阶段推进、状态变更与延期</span>
+    <div class="card-header">
+        <h5 class="mb-1"><i class="bi bi-clock-history me-2 text-primary"></i>项目履历</h5>
+        <div class="text-muted small">项目代码：<span class="font-monospace">{{ $project->project_code }}</span></div>
     </div>
     <div class="card-body">
         @if ($logs->isEmpty())
-        <div class="alert alert-info mb-0">该项目还没有履历记录</div>
-        @else
-        <div class="timeline">
-            @foreach ($logs as $log)
-            <div class="timeline-item">
-                <div class="timeline-dot bg-{{ $log->badge() }}"></div>
-                <div class="timeline-body">
-                    <div class="d-flex justify-content-between flex-wrap gap-1">
-                        <div class="fw-semibold">{{ $log->action }}</div>
-                        <div class="text-muted small">{{ $log->created_at?->format('Y-m-d H:i:s') }}</div>
-                    </div>
-                    @if ($log->detail)
-                    <div class="mt-1">{{ $log->detail }}</div>
-                    @endif
-                    <div class="text-muted small mt-1">
-                        操作人：{{ $log->user->identity_label ?? '—' }}
-                        @if ($log->task) · 任务：{{ $log->task->name }} @endif
-                    </div>
-                </div>
+            <div class="alert alert-info text-center mb-0">
+                <i class="bi bi-info-circle me-2"></i>暂无履历记录
             </div>
-            @endforeach
-        </div>
-        <div class="mt-3">{{ $logs->links() }}</div>
+        @else
+            <div class="timeline">
+                @foreach ($logs as $log)
+                    <div class="timeline-item">
+                        <div class="timeline-badge bg-{{ $log->badge() }}">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <div class="timeline-panel">
+                            <div class="timeline-heading">
+                                <h6 class="timeline-title">{{ $log->action }}</h6>
+                                <p class="mb-0 small text-muted">
+                                    <i class="bi bi-clock me-1"></i>{{ $log->created_at?->format('Y-m-d H:i:s') }}
+                                    <span class="mx-2">|</span>
+                                    <i class="bi bi-person me-1"></i>{{ $log->user->identity_label ?? '未知' }}
+                                    @if ($log->task)
+                                        <span class="mx-2">|</span><i class="bi bi-list-task me-1"></i>{{ $log->task->name }}
+                                    @endif
+                                </p>
+                            </div>
+                            @if ($log->detail)
+                                <div class="alert alert-light border mb-0 py-2">
+                                    <strong><i class="bi bi-file-text me-1"></i>操作内容：</strong>{{ $log->detail }}
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+            <div class="mt-3">{{ $logs->links() }}</div>
         @endif
     </div>
 </div>
+@endsection
 
 @push('styles')
 <style>
-    .timeline { position: relative; padding-left: 22px; border-left: 2px solid #e9ecef; }
-    .timeline-item { position: relative; margin-bottom: 18px; }
-    .timeline-dot { position: absolute; left: -31px; top: 6px; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 0 3px #fff; }
-    .timeline-body { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px 14px; }
+    .timeline { position: relative; padding-left: 2rem; border-left: 3px solid #dee2e6; }
+    .timeline-item { position: relative; margin-bottom: 2rem; }
+    .timeline-badge { position: absolute; left: -2.8rem; width: 2.5rem; height: 2.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,.1); }
+    .timeline-panel { background: #f8f9fa; border-radius: .5rem; padding: 1rem 1.2rem; border: 1px solid #dee2e6; transition: all .2s ease; }
+    .timeline-panel:hover { box-shadow: 0 4px 8px rgba(0,0,0,.08); transform: translateX(3px); }
+    .timeline-heading { margin-bottom: .6rem; border-bottom: 1px solid #dee2e6; padding-bottom: .5rem; }
+    .timeline-title { font-size: 1.05rem; font-weight: 600; margin-bottom: .35rem; color: #333; }
+    @media (max-width: 575.98px) { .timeline { padding-left: 1.4rem; } .timeline-badge { left: -2rem; width: 1.8rem; height: 1.8rem; font-size: .8rem; } }
 </style>
 @endpush
-@endsection
