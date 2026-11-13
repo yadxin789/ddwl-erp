@@ -78,6 +78,23 @@
                                     @if ($message->content)
                                         <div class="message-bubble">{{ $message->content }}</div>
                                     @endif
+                                    @if ($message->file)
+                                        @php
+                                            $fileName = $message->file->file_name;
+                                            $isImage = str_starts_with((string) $message->file->mime_type, 'image/');
+                                        @endphp
+                                        @if ($isImage)
+                                            <a href="{{ route('files.preview', $message->file) }}" target="_blank" rel="noopener" class="d-inline-block mt-1">
+                                                <img src="{{ route('files.preview', $message->file) }}" alt="{{ $fileName }}" class="chat-image-attachment">
+                                            </a>
+                                        @else
+                                            <a href="{{ route('files.download', $message->file) }}" class="file-attachment" title="下载 {{ $fileName }}">
+                                                <i class="bi bi-file-earmark-arrow-down"></i>
+                                                <span class="text-truncate">{{ $fileName }}</span>
+                                                <span class="text-muted small flex-shrink-0">{{ number_format(max(1, (int) $message->file->file_size) / 1024, 1) }} KB</span>
+                                            </a>
+                                        @endif
+                                    @endif
                                 </div>
                             </div>
                         @empty
@@ -90,12 +107,19 @@
                 </div>
 
                 <div class="chat-composer">
-                    <form method="POST" action="{{ route('office.chat.send', $room) }}" id="chat-form">
+                    <form method="POST" action="{{ route('office.chat.send', $room) }}" enctype="multipart/form-data" id="chat-form">
                         @csrf
+                        <input type="file" name="file" id="chat-file-input" class="d-none">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <div class="d-flex align-items-center gap-2">
                                 <button type="button" class="btn btn-sm btn-warning text-dark" id="emoji-btn" title="表情">
                                     <i class="bi bi-emoji-smile me-1"></i>表情
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="chat-image-btn" title="上传图片">
+                                    <i class="bi bi-image me-1"></i>图片
+                                </button>
+                                <button type="button" class="btn btn-sm btn-info text-white" id="chat-file-btn" title="上传文件">
+                                    <i class="bi bi-paperclip me-1"></i>文件
                                 </button>
                             </div>
                             <button type="submit" class="btn btn-sm btn-primary px-4">
@@ -103,10 +127,19 @@
                             </button>
                         </div>
                         <div class="border rounded bg-white">
+                            <div class="chat-file-preview d-none" id="chat-file-preview">
+                                <img id="chat-file-thumb" class="d-none" alt="图片预览">
+                                <i id="chat-file-icon" class="bi bi-file-earmark text-primary" style="font-size:22px;"></i>
+                                <span class="flex-grow-1 text-truncate small" id="chat-file-name"></span>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0" id="chat-file-clear" title="移除附件">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
                             <textarea name="content" id="chat-input" rows="2" class="form-control border-0"
-                                      placeholder="输入消息…" style="resize:none;box-shadow:none;" required></textarea>
+                                      placeholder="输入消息…" style="resize:none;box-shadow:none;"></textarea>
                         </div>
                         @error('content')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                        @error('file')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                     </form>
                     <div class="emoji-panel d-none" id="emoji-panel">
                         <div class="emoji-grid">
@@ -167,6 +200,63 @@
             && !e.target.closest('#emoji-panel')
             && !e.target.closest('#emoji-btn')) {
             emojiPanel.classList.add('d-none');
+        }
+    });
+
+    const fileInput = document.getElementById('chat-file-input');
+    const imageBtn = document.getElementById('chat-image-btn');
+    const fileBtn = document.getElementById('chat-file-btn');
+    const filePreview = document.getElementById('chat-file-preview');
+    const fileThumb = document.getElementById('chat-file-thumb');
+    const fileIcon = document.getElementById('chat-file-icon');
+    const fileName = document.getElementById('chat-file-name');
+    const fileClear = document.getElementById('chat-file-clear');
+    const form = document.getElementById('chat-form');
+
+    imageBtn.addEventListener('click', function () {
+        fileInput.value = '';
+        fileInput.accept = 'image/png,image/jpeg,image/gif,image/webp,image/bmp';
+        fileInput.click();
+    });
+    fileBtn.addEventListener('click', function () {
+        fileInput.value = '';
+        fileInput.accept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z';
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function () {
+        const file = fileInput.files[0];
+        if (!file) return;
+        if (file.size > 20 * 1024 * 1024) {
+            alert('文件大小不能超过 20MB');
+            fileInput.value = '';
+            return;
+        }
+
+        fileName.textContent = file.name;
+        if (file.type.startsWith('image/')) {
+            fileThumb.src = URL.createObjectURL(file);
+            fileThumb.classList.remove('d-none');
+            fileIcon.classList.add('d-none');
+        } else {
+            fileThumb.src = '';
+            fileThumb.classList.add('d-none');
+            fileIcon.classList.remove('d-none');
+        }
+        filePreview.classList.remove('d-none');
+    });
+
+    fileClear.addEventListener('click', function () {
+        fileInput.value = '';
+        fileThumb.src = '';
+        filePreview.classList.add('d-none');
+    });
+
+    form.addEventListener('submit', function (e) {
+        if (!input.value.trim() && !fileInput.files.length) {
+            e.preventDefault();
+            alert('请输入消息内容或选择图片/文件。');
+            input.focus();
         }
     });
 })();

@@ -3,6 +3,7 @@
 namespace App\Models\Office;
 
 use App\Models\Organization\User;
+use App\Models\System\MediaFile;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -19,5 +20,10 @@ class ChatMessage extends Model
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
+    }
+
+    public function file(): BelongsTo
+    {
+        return $this->belongsTo(MediaFile::class, 'file_id');
     }
 }

@@ -2,7 +2,7 @@
     .chat-shell { overflow: hidden; }
     .chat-body { height: calc(100vh - 230px); min-height: 520px; }
     .chat-body-system { height: calc(100vh - 140px); }
-    .chat-sidebar { border-right: 1px solid #dee2e6; background: #f8f9fa; display: flex; flex-direction: column; min-width: 210px; }
+    .chat-sidebar { height: 100%; border-right: 1px solid #dee2e6; background: #f8f9fa; display: flex; flex-direction: column; min-width: 210px; }
     .chat-project-head { padding: 12px; border-bottom: 1px solid #dee2e6; background: #fff; }
     .chat-sidebar-title { padding: 8px 12px; border-bottom: 1px solid #dee2e6; font-size: 12px; color: #8a94a6; }
     .chat-member-list { flex: 1; overflow-y: auto; }
@@ -21,9 +21,9 @@
     .chat-member-meta { display: flex; flex-direction: column; min-width: 0; }
     .chat-member-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .chat-member-sub { font-size: 12px; color: #8a94a6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .chat-main { display: flex; flex-direction: column; min-width: 0; }
+    .chat-main { height: 100%; display: flex; flex-direction: column; min-width: 0; }
     .chat-main-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #dee2e6; background: #fff; }
-    .chat-messages { flex: 1; overflow-y: auto; background: #f5f5f5; padding: 16px; }
+    .chat-messages { flex: 1; min-height: 0; overflow-y: auto; background: #f5f5f5; padding: 16px; }
     .chat-container { display: flex; flex-direction: column; }
     .chat-message { display: flex; align-items: flex-start; margin-bottom: 16px; gap: 8px; }
     .chat-message.mine { flex-direction: row-reverse; }
@@ -38,6 +38,9 @@
     .file-attachment { display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin-top: 4px; border-radius: 6px; background: rgba(0,0,0,.06); font-size: 13px; cursor: pointer; text-align: left; }
     .file-attachment:hover { background: rgba(0,0,0,.1); }
     .file-attachment i { color: #1976d2; }
+    .chat-image-attachment { display: block; max-width: 220px; max-height: 180px; border-radius: 6px; border: 1px solid #e0e3e8; object-fit: contain; background: #fff; }
+    .chat-file-preview { display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 8px; border: 1px solid #e5e7eb; border-radius: 6px; background: #f8f9fa; }
+    .chat-file-preview img { width: 38px; height: 38px; border-radius: 4px; object-fit: cover; border: 1px solid #dee2e6; }
     .chat-delete { margin-top: 3px; }
     .chat-composer { position: relative; padding: 12px 16px; border-top: 1px solid #dee2e6; background: #fff; }
     .emoji-panel { position: absolute; left: 16px; right: 16px; bottom: 100%; z-index: 20; background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 10px; max-height: 190px; overflow-y: auto; box-shadow: 0 -2px 8px rgba(0,0,0,.1); }

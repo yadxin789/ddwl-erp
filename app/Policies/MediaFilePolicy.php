@@ -57,6 +57,11 @@ class MediaFilePolicy
             return false;
         }
 
+        // 系统全员聊天室：所有已登录系统成员都可查看/下载其中的附件。
+        if ($room->room_type === 'system_all') {
+            return true;
+        }
+
         $project = RndProject::withoutGlobalScopes()->find($room->related_id);
         if (! $project) {
             return false;

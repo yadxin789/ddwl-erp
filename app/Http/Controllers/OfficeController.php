@@ -188,12 +188,33 @@ class OfficeController extends Controller
 
     public function chatSend(Request $request, ChatRoom $room)
     {
-        $request->validate(['content' => ['required', 'string', 'max:2000']]);
+        if ($room->room_type !== 'system_all') {
+            return redirect()->route('office.chat.rooms');
+        }
+
+        $request->validate([
+            'content' => ['nullable', 'string', 'max:2000'],
+            'file' => ['nullable', 'file', 'max:20480'],
+        ]);
+
+        $content = trim((string) $request->input('content', ''));
+        if ($content === '' && ! $request->hasFile('file')) {
+            return back()->withErrors(['content' => '消息内容不能为空。']);
+        }
+
+        $fileId = null;
+        $type = 'text';
+        if ($request->hasFile('file')) {
+            $fileId = $this->files->upload($request->file('file'), 'chat_file', 'chat_room', $room->id)->id;
+            $type = 'file';
+        }
+
         \App\Models\Office\ChatMessage::create([
             'room_id' => $room->id,
             'sender_id' => Auth::id(),
-            'msg_type' => 'text',
-            'content' => $request->input('content'),
+            'msg_type' => $type,
+            'content' => $content,
+            'file_id' => $fileId,
             'created_at' => now(),
         ]);
 
