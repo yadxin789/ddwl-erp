@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // spatie/laravel-permission 中间件别名
         $middleware->web(append: [LogUnauthorizedAccess::class]);
 
+        // OnlyOffice DocumentServer 保存回调为服务器请求，不带 CSRF 会话
+        $middleware->validateCsrfTokens(except: [
+            'rnd/collab/callback/*',
+        ]);
+
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,

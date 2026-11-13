@@ -47,6 +47,22 @@ return [
             'report' => false,
         ],
 
+        // 协同办公源文件仓库（OnlyOffice 读写，不对外公开）
+        'file_repository' => [
+            'driver' => 'local',
+            'root' => storage_path('app/file-repository'),
+            'throw' => false,
+            'report' => false,
+        ],
+
+        // 协同办公内置 Office 模板
+        'collab_templates' => [
+            'driver' => 'local',
+            'root' => storage_path('app/templates'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

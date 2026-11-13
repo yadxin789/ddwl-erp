@@ -505,6 +505,8 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group
         // P5-1 项目组内协同办公（文档）
         Route::get('/rnd/projects/{project}/collab', [RndController::class, 'collab'])->whereNumber('project')->name('rnd.projects.collab');
         Route::get('/rnd/projects/{project}/collab/create', [RndController::class, 'collabCreate'])->whereNumber('project')->name('rnd.projects.collab.create');
+        Route::get('/rnd/projects/{project}/collab/{doc}/open', [RndController::class, 'collabOpen'])
+            ->whereNumber('project')->whereNumber('doc')->name('rnd.projects.collab.open');
         Route::post('/rnd/projects/{project}/collab', [RndController::class, 'collabStore'])->whereNumber('project')->name('rnd.projects.collab.store');
         Route::post('/rnd/collab/{doc}/save', [RndController::class, 'collabSave'])->whereNumber('doc')->name('rnd.collab.save');
         Route::get('/rnd/collab/{doc}/download', [RndController::class, 'collabDownload'])->whereNumber('doc')->name('rnd.collab.download');
@@ -818,3 +820,13 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group
         Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| OnlyOffice DocumentServer 服务端接口（无登录态，doc_key + JWT 校验）
+|--------------------------------------------------------------------------
+*/
+Route::get('/rnd/collab/download/{doc}', [RndController::class, 'collabOfficeDownload'])
+    ->whereNumber('doc')->name('rnd.collab.officeDownload');
+Route::post('/rnd/collab/callback/{doc}', [RndController::class, 'collabOfficeCallback'])
+    ->whereNumber('doc')->name('rnd.collab.officeCallback');

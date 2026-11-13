@@ -19,9 +19,12 @@ use App\Models\Rnd\RndProjectLog;
 use App\Models\Rnd\RndProjectTask;
 use App\Models\Rnd\RndTaskType;
 use App\Models\System\MediaFile;
+use App\Services\CollabOfficeService;
 use App\Services\FileService;
 use App\Services\RndProjectService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class RndController extends Controller
 {
@@ -933,29 +936,31 @@ class RndController extends Controller
         $model = RndProject::withoutGlobalScopes()->findOrFail($project);
         $this->authorize('view', $model);
 
+        if ($request->filled('doc')) {
+            return redirect()->route('rnd.projects.collab.open', [
+                'project' => $model->id,
+                'doc' => (int) $request->query('doc'),
+            ]);
+        }
+
         $docs = RndCollabDocument::with(['creator', 'updater'])
             ->where('project_id', $model->id)
             ->orderByDesc('updated_at')
             ->get();
 
-        $current = null;
-        if ($request->filled('doc')) {
-            $current = $docs->firstWhere('id', (int) $request->query('doc'));
-            abort_unless($current, 404);
-        }
-
         return view('rnd.collab', [
             'project' => $model,
             'docs' => $docs,
-            'current' => $current,
             'docTypes' => RndCollabDocument::TYPES,
         ]);
     }
 
-    public function collabCreate(int $project)
+    public function collabCreate(int $project, CollabOfficeService $office)
     {
         $model = RndProject::withoutGlobalScopes()->findOrFail($project);
         $this->authorize('view', $model);
+
+        $office->ensureTemplates();
 
         return view('rnd.collab-create', [
             'project' => $model,
@@ -963,38 +968,155 @@ class RndController extends Controller
         ]);
     }
 
-    public function collabStore(Request $request, int $project)
+    public function collabStore(Request $request, int $project, CollabOfficeService $office)
     {
         $model = RndProject::withoutGlobalScopes()->findOrFail($project);
         $this->authorize('view', $model);
 
-        $data = $request->validate([
-            'title' => ['required', 'string', 'max:200'],
-            'doc_type' => ['nullable', 'in:doc,sheet,slide,text'],
+        $mode = $request->input('mode', 'template');
+        $office->ensureTemplates();
+
+        if ($mode === 'upload') {
+            $data = $request->validate([
+                'title' => ['required', 'string', 'max:200'],
+                'file' => ['required', 'file', 'max:20480'],
+            ], [
+                'title.required' => '请输入文档名称。',
+                'file.required' => '请选择要上传的文档。',
+                'file.max' => '文档不能超过 20MB。',
+            ]);
+
+            $file = $request->file('file');
+            $ext = strtolower($file->getClientOriginalExtension());
+            if (! in_array($ext, ['docx', 'xlsx', 'pptx'], true)) {
+                throw ValidationException::withMessages(['file' => '仅支持 docx / xlsx / pptx 格式。']);
+            }
+
+            $type = ['docx' => 'doc', 'xlsx' => 'sheet', 'pptx' => 'slide'][$ext];
+            $doc = RndCollabDocument::create([
+                'project_id' => $model->id,
+                'title' => $data['title'],
+                'doc_type' => $type,
+                'content' => '',
+                'version' => 1,
+                'creator_id' => auth()->id(),
+                'updater_id' => auth()->id(),
+            ]);
+
+            $office->storeUploadedFile($doc, $file->getRealPath(), $ext);
+        } else {
+            $data = $request->validate([
+                'title' => ['required', 'string', 'max:200'],
+                'doc_type' => ['required', 'in:doc,sheet,slide'],
+            ], [
+                'title.required' => '请输入文档名称。',
+                'doc_type.required' => '请选择文档类型。',
+            ]);
+
+            $doc = RndCollabDocument::create([
+                'project_id' => $model->id,
+                'title' => $data['title'],
+                'doc_type' => $data['doc_type'],
+                'content' => '',
+                'version' => 1,
+                'creator_id' => auth()->id(),
+                'updater_id' => auth()->id(),
+            ]);
+
+            $office->createNewFile($doc);
+        }
+
+        RndProjectLog::record(
+            $model->id,
+            '新建协同文档',
+            '《' . $doc->title . '》(' . $doc->typeLabel() . ')',
+            'document'
+        );
+
+        return redirect()->route('rnd.projects.collab.open', [
+            'project' => $model->id,
+            'doc' => $doc->id,
+        ])->with('success', '协同文档已创建，正在加载 OnlyOffice 编辑器。');
+    }
+
+    /** 打开 OnlyOffice 协同编辑器 */
+    public function collabOpen(int $project, int $doc, CollabOfficeService $office)
+    {
+        $model = RndProject::withoutGlobalScopes()->findOrFail($project);
+        $this->authorize('view', $model);
+
+        $d = RndCollabDocument::where('project_id', $model->id)->findOrFail($doc);
+        $office->ensureRepositoryFile($d);
+
+        // key 保持稳定，多人同时打开才会进入同一个 OnlyOffice 协同会话；
+        // 文件内容变化由保存回调同步，不在这里换 key。
+        $config = $office->buildEditorConfig($d, auth()->user(), true);
+
+        return view('rnd.collab-office', [
+            'project' => $model,
+            'doc' => $d,
+            'config' => $config,
+            'officeServer' => $office->serverUrl(),
+            'officeEnabled' => $office->enabled(),
         ]);
+    }
 
-        $type = $data['doc_type'] ?? 'doc';
-        $templates = [
-            'doc' => "# {$data['title']}\n\n",
-            'sheet' => "项目\t负责人\t状态\n\t\t\n",
-            'slide' => "第 1 页：{$data['title']}\n\n",
-            'text' => '',
-        ];
+    /** 系统内下载（登录态） */
+    public function collabDownload(int $doc)
+    {
+        $d = RndCollabDocument::findOrFail($doc);
+        $project = RndProject::withoutGlobalScopes()->findOrFail($d->project_id);
+        $this->authorize('view', $project);
 
-        $doc = RndCollabDocument::create([
-            'project_id' => $model->id,
-            'title' => $data['title'],
-            'doc_type' => $type,
-            'content' => $templates[$type] ?? '',
-            'version' => 1,
-            'creator_id' => auth()->id(),
-            'updater_id' => auth()->id(),
+        if ($d->hasRepositoryFile()) {
+            return Storage::disk('file_repository')->download($d->storage_path, $d->downloadName());
+        }
+
+        return response()->streamDownload(function () use ($d) {
+            echo $d->content;
+        }, $d->downloadName(), ['Content-Type' => 'text/plain; charset=UTF-8']);
+    }
+
+    /** DocumentServer 读取源文件（无登录态，doc_key 校验） */
+    public function collabOfficeDownload(Request $request, int $doc)
+    {
+        $d = RndCollabDocument::findOrFail($doc);
+        abort_unless(hash_equals((string) $d->doc_key, (string) $request->query('k')), 404);
+
+        abort_unless($d->hasRepositoryFile(), 404);
+
+        $mime = match ($d->fileExtension()) {
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            default => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        };
+
+        return response()->file(Storage::disk('file_repository')->path($d->storage_path), [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . rawurlencode($d->downloadName()) . '"',
         ]);
+    }
 
-        RndProjectLog::record($model->id, '新建协同文档', '《' . $doc->title . '》(' . $doc->typeLabel() . ')', 'document');
+    /** DocumentServer 保存回调（无登录态，doc_key + JWT 校验） */
+    public function collabOfficeCallback(Request $request, int $doc, CollabOfficeService $office)
+    {
+        $d = RndCollabDocument::findOrFail($doc);
+        abort_unless(hash_equals((string) $d->doc_key, (string) $request->query('k')), 404);
 
-        return redirect()->route('rnd.projects.collab', ['project' => $model->id, 'doc' => $doc->id])
-            ->with('success', '协同文档已创建，已进入编辑。');
+        $payload = $request->json()->all();
+        if (! empty($payload['key']) && ! hash_equals((string) $d->doc_key, (string) $payload['key'])) {
+            abort(403);
+        }
+        if ($office->jwtSecret() !== '') {
+            abort_unless($office->verifyJwt((string) ($payload['token'] ?? '')), 403);
+        }
+
+        $status = (int) ($payload['status'] ?? 0);
+        if (in_array($status, [2, 6], true) && ! empty($payload['url'])) {
+            $office->saveFromUrl($d, (string) $payload['url']);
+        }
+
+        return response()->json(['error' => 0]);
     }
 
     public function collabSave(Request $request, int $doc)
@@ -1002,6 +1124,12 @@ class RndController extends Controller
         $d = RndCollabDocument::findOrFail($doc);
         $project = RndProject::withoutGlobalScopes()->findOrFail($d->project_id);
         $this->authorize('view', $project);
+
+        if ($d->hasRepositoryFile()) {
+            throw ValidationException::withMessages([
+                'content' => 'Office 文档请在 OnlyOffice 编辑器中保存，系统会自动接收保存回调。',
+            ]);
+        }
 
         $request->validate([
             'title' => ['required', 'string', 'max:200'],
@@ -1022,19 +1150,8 @@ class RndController extends Controller
             'document'
         );
 
-        return redirect()->route('rnd.projects.collab', ['project' => $project->id, 'doc' => $d->id])
+        return redirect()->route('rnd.projects.collab.open', ['project' => $project->id, 'doc' => $d->id])
             ->with('success', '已保存 v' . $d->version . '（' . (auth()->user()->identity_label ?? '') . '）');
-    }
-
-    public function collabDownload(int $doc)
-    {
-        $d = RndCollabDocument::findOrFail($doc);
-        $project = RndProject::withoutGlobalScopes()->findOrFail($d->project_id);
-        $this->authorize('view', $project);
-
-        return response()->streamDownload(function () use ($d) {
-            echo $d->content;
-        }, $d->downloadName(), ['Content-Type' => 'text/plain; charset=UTF-8']);
     }
 
     public function collabDestroy(int $project, int $doc)
@@ -1316,7 +1433,7 @@ class RndController extends Controller
             'id' => (int) $d->id,
             'title' => $d->title,
             'type' => $d->typeLabel(),
-            'content' => (string) $d->content,
+            'content' => $d->previewText(),
             'download_url' => route('rnd.collab.download', $d),
         ]);
     }

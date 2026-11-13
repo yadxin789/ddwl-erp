@@ -1,72 +1,142 @@
 @extends('layouts.admin')
 
-@section('title', '新建协作文档')
+@section('title', '新建协同文档')
 
 @section('content')
 @include('rnd.partials.project-tabs', ['project' => $project, 'activeTab' => 'collab'])
-
-<div class="d-flex align-items-center gap-2 mb-3">
-    <a href="{{ route('rnd.projects.collab', $project) }}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i>返回文档列表
-    </a>
-    <h4 class="mb-0"><i class="bi bi-plus-square me-2 text-primary"></i>新建文档</h4>
-</div>
 
 @if ($errors->any())
 <div class="alert alert-danger py-2">{{ $errors->first() }}</div>
 @endif
 
-<div class="card">
-    <div class="card-header">
-        项目：{{ $project->project_name }}（<span class="font-monospace">{{ $project->project_code }}</span>）
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1"><i class="bi bi-file-earmark-plus me-2 text-primary"></i>新建协同文档</h4>
+        <p class="text-muted mb-0">项目：{{ $project->project_name }}（{{ $project->project_code }}）· 创建后直接进入 OnlyOffice 协同编辑</p>
     </div>
-    <div class="card-body">
-        <form method="POST" action="{{ route('rnd.projects.collab.store', $project) }}">
-            @csrf
-            <div class="mb-4">
-                <label class="form-label fw-semibold">文档名称</label>
-                <input type="text" name="title" class="form-control" value="{{ old('title') }}" maxlength="200" required placeholder="例如：项目周会纪要">
-            </div>
+    <a href="{{ route('rnd.projects.collab', $project) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>返回协同办公
+    </a>
+</div>
 
-            <div class="mb-3 fw-semibold">选择文档类型</div>
-            <div class="row g-3">
-                @foreach ($docTypes as $key => $type)
-                    <div class="col-sm-6 col-lg-3">
-                        <label class="card h-100 doc-type-card {{ old('doc_type', 'doc') === $key ? 'border-primary shadow-sm' : '' }}">
-                            <input type="radio" name="doc_type" value="{{ $key }}" class="d-none doc-type-input" @checked(old('doc_type', 'doc') === $key)>
-                            <div class="card-body text-center py-4">
-                                <i class="bi {{ $type['icon'] }} {{ $type['color'] }}" style="font-size:38px;"></i>
-                                <div class="fw-semibold mt-2">{{ $type['label'] }}</div>
-                                <div class="text-muted small">.{{ $type['ext'] }}</div>
-                            </div>
-                        </label>
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-file-earmark-plus me-2"></i>从内置模板新建</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">系统内置标准 Office 模板，创建后立即进入协同编辑。</p>
+                <form method="POST" action="{{ route('rnd.projects.collab.store', $project) }}">
+                    @csrf
+                    <input type="hidden" name="mode" value="template">
+                    <div class="mb-3">
+                        <label class="form-label">文档名称</label>
+                        <input type="text" name="title" class="form-control" placeholder="例如：项目需求文档" maxlength="200" required>
+                        @error('title')<div class="text-danger small">{{ $message }}</div>@enderror
                     </div>
-                @endforeach
+                    <div class="mb-3">
+                        <label class="form-label">文档类型</label>
+                        <div class="row text-center g-2">
+                            <div class="col-4">
+                                <label class="btn btn-outline-primary w-100 template-option" style="cursor:pointer;">
+                                    <input type="radio" name="doc_type" value="doc" class="d-none" checked>
+                                    <i class="bi bi-file-earmark-word" style="font-size:28px;"></i>
+                                    <div class="small mt-1">Word 文档</div>
+                                </label>
+                            </div>
+                            <div class="col-4">
+                                <label class="btn btn-outline-success w-100 template-option" style="cursor:pointer;">
+                                    <input type="radio" name="doc_type" value="sheet" class="d-none">
+                                    <i class="bi bi-file-earmark-spreadsheet" style="font-size:28px;"></i>
+                                    <div class="small mt-1">Excel 表格</div>
+                                </label>
+                            </div>
+                            <div class="col-4">
+                                <label class="btn btn-outline-danger w-100 template-option" style="cursor:pointer;">
+                                    <input type="radio" name="doc_type" value="slide" class="d-none">
+                                    <i class="bi bi-file-earmark-slides" style="font-size:28px;"></i>
+                                    <div class="small mt-1">PPT 演示</div>
+                                </label>
+                            </div>
+                        </div>
+                        @error('doc_type')<div class="text-danger small">{{ $message }}</div>@enderror
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i>创建并编辑</button>
+                </form>
             </div>
+        </div>
+    </div>
 
-            <div class="alert alert-info mt-4 mb-3 py-2 small">
-                新建文档会写入一份对应的初始模板，创建后进入协同编辑；正文保存在本机数据库，断网可用。
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-upload me-2"></i>上传现有文档</h6>
             </div>
-
-            <div class="d-flex gap-2">
-                <button class="btn btn-primary"><i class="bi bi-check2 me-1"></i>创建并编辑</button>
-                <a href="{{ route('rnd.projects.collab', $project) }}" class="btn btn-outline-secondary">取消</a>
+            <div class="card-body">
+                <p class="text-muted small">上传 docx / xlsx / pptx 文件（不超过 20MB），上传后即可在线协同编辑。</p>
+                <form method="POST" action="{{ route('rnd.projects.collab.store', $project) }}" enctype="multipart/form-data">
+                    @csrf
+                    <input type="hidden" name="mode" value="upload">
+                    <div class="mb-3">
+                        <label class="form-label">文档名称</label>
+                        <input type="text" id="upload-title" name="title" class="form-control" placeholder="默认使用文件名" maxlength="200" required>
+                        @error('title')<div class="text-danger small">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">选择文件</label>
+                        <input type="file" id="upload-file" name="file" class="form-control" accept=".docx,.xlsx,.pptx" required>
+                        @error('file')<div class="text-danger small">{{ $message }}</div>@enderror
+                    </div>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-upload me-1"></i>上传并编辑</button>
+                </form>
             </div>
-        </form>
+        </div>
     </div>
 </div>
-@endsection
 
-@push('scripts')
+<style>
+    .template-option {
+        border: 2px solid #ced4da !important;
+        background-color: #eef1f3 !important;
+        color: #6c757d !important;
+        opacity: .75;
+        transition: all .15s ease-in-out;
+    }
+    .template-option i { color: #868e96 !important; }
+    .template-option:hover { transform: translateY(-1px); opacity: 1; }
+    .template-option.btn-outline-primary:hover { border-color: #0d6efd !important; }
+    .template-option.btn-outline-success:hover { border-color: #198754 !important; }
+    .template-option.btn-outline-danger:hover { border-color: #dc3545 !important; }
+    .template-option.active { opacity: 1; }
+    .template-option.active.btn-outline-primary { background-color: #0d6efd !important; border-color: #0d6efd !important; color: #fff !important; box-shadow: 0 0 0 3px rgba(13,110,253,.25); }
+    .template-option.active.btn-outline-success { background-color: #198754 !important; border-color: #198754 !important; color: #fff !important; box-shadow: 0 0 0 3px rgba(25,135,84,.25); }
+    .template-option.active.btn-outline-danger { background-color: #dc3545 !important; border-color: #dc3545 !important; color: #fff !important; box-shadow: 0 0 0 3px rgba(220,53,69,.25); }
+    .template-option.active i { color: #fff !important; }
+</style>
 <script>
-document.querySelectorAll('.doc-type-card').forEach(function (card) {
-    card.addEventListener('click', function () {
-        document.querySelectorAll('.doc-type-card').forEach(function (c) {
-            c.classList.remove('border-primary', 'shadow-sm');
+(function () {
+    var options = document.querySelectorAll('.template-option');
+    function syncAll() {
+        options.forEach(function (label) {
+            var input = label.querySelector('input[type="radio"]');
+            label.classList.toggle('active', input.checked);
         });
-        card.classList.add('border-primary', 'shadow-sm');
-        card.querySelector('.doc-type-input').checked = true;
+    }
+    options.forEach(function (label) {
+        label.querySelector('input[type="radio"]').addEventListener('change', syncAll);
     });
-});
+    syncAll();
+
+    var file = document.getElementById('upload-file');
+    var title = document.getElementById('upload-title');
+    if (file && title) {
+        file.addEventListener('change', function () {
+            if (!title.value && file.files && file.files[0]) {
+                title.value = file.files[0].name.replace(/\.[^.]+$/, '');
+            }
+        });
+    }
+})();
 </script>
-@endpush
+@endsection
