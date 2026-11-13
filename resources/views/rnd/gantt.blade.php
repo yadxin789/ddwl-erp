@@ -150,7 +150,7 @@
     .gantt-scroll-container { overflow-x: auto; max-width: 100%; width: 100%; border: 1px solid #dee2e6; border-radius: .25rem; }
     .gantt-container { min-width: max-content; background: #fff; }
     .gantt-header { display: flex; background: #4a5568; color: #fff; position: sticky; top: 0; z-index: 10; }
-    .gantt-task-column { width: 250px; min-width: 250px; padding: 10px 14px; border-right: 2px solid #2d3748; font-weight: 600; font-size: 14px; }
+    .gantt-task-column { width: 220px; min-width: 220px; padding: 10px 14px; border-right: 2px solid #2d3748; font-weight: 600; font-size: 14px; }
     .gantt-timeline-header { flex: 1; min-width: 0; }
     .gantt-months { display: flex; align-items: center; gap: 10px; background: #2d3748; padding: 7px 12px; }
     .month-legend-title { font-size: 12px; font-weight: 600; color: #a0aec0; white-space: nowrap; }
