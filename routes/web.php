@@ -577,8 +577,7 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group
     Route::get('/chat/rooms', [OfficeController::class, 'chatRooms'])->name('office.chat.rooms');
     Route::get('/chat/rooms/{room}', [OfficeController::class, 'chatShow'])->name('office.chat.show');
     Route::post('/chat/rooms/{room}/send', [OfficeController::class, 'chatSend'])->name('office.chat.send');
-Route::post('/chat/rooms/{room}/clear', [OfficeController::class, 'chatClear'])->name('office.chat.clear');
-Route::post('/chat/rooms/{room}/clear', [OfficeController::class, 'chatClear'])->name('office.chat.clear');
+    Route::post('/chat/rooms/{room}/clear', [OfficeController::class, 'chatClear'])->name('office.chat.clear');
     Route::get('/profile/password', [OfficeController::class, 'password'])->name('office.password');
 
     // 审批中心（个人待办，仅 auth；审批人由 Service 层强制校验）
