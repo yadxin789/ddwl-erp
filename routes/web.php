@@ -27,6 +27,7 @@ use App\Http\Controllers\HrController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\IssueRequestController;
 use App\Http\Controllers\ShippingController;
+use App\Http\Controllers\TrashController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\MarketingController;
@@ -297,6 +298,17 @@ Route::middleware(['auth', \App\Http\Middleware\SetTenantContext::class])->group
     // 在线预览：只放行图片/Excel/PDF/Office，详见 FileService::PREVIEWABLE_EXTENSIONS
     Route::get('/files/{media}/preview', [WorkspaceController::class, 'filePreview'])
         ->whereNumber('media')->name('files.preview');
+
+    // 回收站：个人范围默认；管理员可在页面切换到全系统范围
+    Route::get('/trash', [TrashController::class, 'index'])->name('trash.index');
+    Route::post('/trash/{type}/{id}/restore', [TrashController::class, 'restore'])
+        ->whereNumber('id')->name('trash.restore');
+    Route::post('/trash/{type}/{id}/force-delete', [TrashController::class, 'forceDelete'])
+        ->whereNumber('id')->name('trash.force-delete');
+    Route::post('/trash/{type}/restore-batch', [TrashController::class, 'restoreBatch'])
+        ->name('trash.restore-batch');
+    Route::post('/trash/{type}/force-delete-batch', [TrashController::class, 'forceDeleteBatch'])
+        ->name('trash.force-delete-batch');
 
     /* ---------- v1.3 S7 后台管理（管理员专属，纯运维，不含任何业务操作） ---------- */
 

@@ -19,6 +19,9 @@ return [
         'AI 助手', '个人资料', '资料文件', '企业微信绑定', '我的项目列表',
     ],
 
+    // 全岗位常驻项：不出现在各岗位 menu 数组中，由 NavigationService 统一追加。
+    'global_items' => ['回收站'],
+
     'positions' => [
 
         // ── 系统（非业务） ──
@@ -420,6 +423,7 @@ return [
         '资料文件' => ['route' => 'file.resources', 'permissions' => ['__auth__']],
         '企业微信绑定' => ['route' => 'profile.wecom', 'permissions' => ['__auth__']],
         '我的项目列表' => ['route' => 'project.my', 'permissions' => ['__auth__']],
+        '回收站' => ['route' => 'trash.index', 'permissions' => ['__auth__']],
         '用户管理' => ['route' => 'users.index', 'permissions' => ['system.user.create', 'system.user.delete', 'system.user.edit', 'system.user.view']],
         '部门管理' => ['route' => 'admin.departments', 'permissions' => ['admin.department.manage']],
         '岗位管理' => ['route' => 'admin.positions', 'permissions' => ['admin.position.manage']],
@@ -548,6 +552,7 @@ return [
         '资料文件' => 'fa-folder-open',
         '企业微信绑定' => 'fa-comment-dots',
         '我的项目列表' => 'fa-diagram-project',
+        '回收站' => 'fa-trash-can',
         '用户管理' => 'fa-users-gear',
         '部门管理' => 'fa-sitemap',
         '岗位管理' => 'fa-id-badge',

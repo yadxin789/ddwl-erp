@@ -37,3 +37,15 @@ Schedule::command('erp:legacy-role:migrate --force')
     ->dailyAt('00:30')
     ->timezone('Asia/Shanghai')
     ->when(fn () => now()->toDateString() >= (string) config('navigation.legacy_role_deadline'));
+
+// 回收站到期清理：每天 03:30 彻底删除超过保留天数的内容（含物理文件）
+Schedule::command('trash:purge-expired')
+    ->dailyAt('03:30')
+    ->timezone('Asia/Shanghai')
+    ->withoutOverlapping();
+
+// 物理文件巡检：每天 04:00 清理孤儿文件、旧历史版本和空目录
+Schedule::command('files:gc --fix')
+    ->dailyAt('04:00')
+    ->timezone('Asia/Shanghai')
+    ->withoutOverlapping();

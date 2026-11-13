@@ -152,12 +152,18 @@ class FileService
     }
 
     /**
-     * 删除文件（物理文件 + 记录）
+     * 删除文件：记录进入回收站，物理文件保留到彻底删除/到期清理，保证可恢复。
      */
     public function delete(MediaFile $mediaFile): void
     {
-        Log::info('文件删除', ['user_id' => Auth::id(), 'media_file_id' => $mediaFile->id, 'path' => $mediaFile->file_path]);
-        Storage::disk('local')->delete($mediaFile->file_path);
-        $mediaFile->delete();
+        Log::info('文件进入回收站', [
+            'user_id' => Auth::id(),
+            'media_file_id' => $mediaFile->id,
+            'path' => $mediaFile->file_path,
+        ]);
+
+        if (! $mediaFile->trashed()) {
+            $mediaFile->delete();
+        }
     }
 }

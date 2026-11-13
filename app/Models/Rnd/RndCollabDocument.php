@@ -2,6 +2,7 @@
 
 namespace App\Models\Rnd;
 
+use App\Models\Concerns\RecordsDeletedBy;
 use App\Models\Organization\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,13 +16,14 @@ use Illuminate\Support\Facades\Storage;
 class RndCollabDocument extends Model
 {
     use SoftDeletes;
+    use RecordsDeletedBy;
 
     protected $table = 'rnd_collab_documents';
 
     protected $fillable = [
         'project_id', 'title', 'doc_type', 'content', 'version',
         'extension', 'storage_path', 'doc_key', 'size',
-        'creator_id', 'updater_id',
+        'creator_id', 'updater_id', 'deleted_by',
     ];
 
     public function project(): BelongsTo

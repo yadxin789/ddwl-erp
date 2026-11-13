@@ -43,7 +43,8 @@ class NavigationService
     private function build(?Authenticatable $user): array
     {
         $config = config('navigation', []);
-        $shared = $config['shared'] ?? [];
+        $globalItems = $config['global_items'] ?? [];
+        $shared = array_values(array_unique(array_merge($config['shared'] ?? [], $globalItems)));
         $definitions = array_merge($config['positions'] ?? [], $config['compat_roles'] ?? []);
         $legacy = $config['legacy_role_map'] ?? [];
 
@@ -98,6 +99,11 @@ class NavigationService
             }
         }
         $names = array_keys($names);
+        foreach ($globalItems as $name) {
+            if (! in_array($name, $names, true)) {
+                $names[] = $name;
+            }
+        }
 
         foreach ($names as $name) {
             $item = $this->resolve($name, $user, $shared);
